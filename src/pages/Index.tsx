@@ -25,29 +25,31 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center px-4">
+      <section className="relative min-h-screen flex flex-col">
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/20 rounded-full blur-3xl animate-pulse-slow delay-1000" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-3xl animate-float" />
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 md:w-96 md:h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 md:w-80 md:h-80 bg-accent/20 rounded-full blur-3xl animate-pulse-slow delay-1000" />
         </div>
 
         {/* Navigation */}
-        <nav className="absolute top-0 left-0 right-0 z-50 p-6">
-          <div className="container mx-auto flex items-center justify-between">
+        <nav className="relative z-50 p-4 md:p-6">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Flame className="w-8 h-8 text-primary" />
-              <span className="text-2xl font-display font-bold text-gradient">NaughtyHooks</span>
+              <Flame className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <span className="text-xl md:text-2xl font-display font-bold text-gradient">NaughtyHooks</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <Link to="/login">
-                <Button variant="ghost" size="lg">
+                <Button variant="ghost" size="sm" className="hidden sm:flex">
                   Sign In
+                </Button>
+                <Button variant="ghost" size="icon" className="sm:hidden">
+                  <Heart className="w-4 h-4" />
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button variant="hero" size="lg">
+                <Button size="sm">
                   Get Started
                 </Button>
               </Link>
@@ -56,46 +58,47 @@ const Index = () => {
         </nav>
 
         {/* Hero Content */}
-        <div className="relative z-10 text-center max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8">
-              <Crown className="w-4 h-4 text-secondary" />
-              <span className="text-sm text-muted-foreground">Nigeria's Premier Adult Dating Platform</span>
-            </div>
-            
-            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 leading-tight">
-              Where <span className="text-gradient">Desire</span> Meets{" "}
-              <span className="text-gradient-gold">Connection</span>
-            </h1>
-            
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              Connect with like-minded adults in your area. Real people, real connections, 
-              real chemistry. 18+ only, Nigeria exclusive.
-            </p>
+        <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
+                <Crown className="w-3 h-3 text-secondary" />
+                <span className="text-xs text-muted-foreground">Nigeria's Premier Adult Dating</span>
+              </div>
+              
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold mb-4 leading-tight">
+                Where <span className="text-gradient">Desire</span> Meets{" "}
+                <span className="text-gradient-gold">Connection</span>
+              </h1>
+              
+              <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-lg mx-auto leading-relaxed">
+                Connect with like-minded adults in your area. Real people, real connections. 18+ only, Nigeria exclusive.
+              </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/signup">
-                <Button variant="hero" size="xl" className="group">
-                  <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  Start Your Journey
-                </Button>
-              </Link>
-              <Link to="/discover">
-                <Button variant="outline" size="xl">
-                  <MapPin className="w-5 h-5" />
-                  Explore Nearby
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link to="/signup" className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto group">
+                    <Heart className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    Start Your Journey
+                  </Button>
+                </Link>
+                <Link to="/discover" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                    <MapPin className="w-4 h-4" />
+                    Explore Nearby
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2">
+        {/* Scroll indicator - hidden on mobile */}
+        <div className="hidden md:block absolute bottom-10 left-1/2 -translate-x-1/2">
           <motion.div
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 2, repeat: Infinity }}

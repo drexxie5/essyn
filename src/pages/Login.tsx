@@ -36,88 +36,77 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" />
-      </div>
+    <div className="min-h-screen bg-background flex flex-col px-4 py-6">
+      {/* Header */}
+      <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground mb-6">
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </Link>
 
-      <div className="relative z-10 w-full max-w-md">
-        {/* Back button */}
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to home
-        </Link>
-
-        <div className="glass rounded-2xl p-8">
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <Flame className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-display font-bold text-gradient">NaughtyHooks</span>
-          </div>
-
-          <h1 className="text-3xl font-display font-bold text-center mb-2">Welcome Back</h1>
-          <p className="text-muted-foreground text-center mb-8">Sign in to continue your adventure</p>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-muted/50 border-border/50 focus:border-primary"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-muted/50 border-border/50 focus:border-primary pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline font-medium">
-                Sign up
-              </Link>
-            </p>
-          </div>
+      <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <Flame className="w-8 h-8 text-primary" />
+          <span className="text-2xl font-display font-bold text-gradient">NaughtyHooks</span>
         </div>
 
-        {/* Age disclaimer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          By signing in, you confirm you are 18+ years old and agree to our{" "}
-          <Link to="/terms" className="text-primary hover:underline">Terms</Link> and{" "}
-          <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+        <h1 className="text-2xl font-display font-bold text-center mb-2">Welcome Back</h1>
+        <p className="text-muted-foreground text-center text-sm mb-8">Sign in to continue your adventure</p>
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-12"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="h-12 pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <Button type="submit" size="lg" className="w-full h-12" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
+
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Don't have an account?{" "}
+          <Link to="/signup" className="text-primary font-medium">
+            Sign up
+          </Link>
         </p>
       </div>
+
+      {/* Age disclaimer */}
+      <p className="text-center text-xs text-muted-foreground mt-6">
+        By signing in, you confirm you are 18+ and agree to our{" "}
+        <Link to="/terms" className="text-primary">Terms</Link>
+      </p>
     </div>
   );
 };

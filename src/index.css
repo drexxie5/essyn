@@ -148,6 +148,14 @@
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 
 @keyframes float {
@@ -156,5 +164,13 @@
   }
   50% {
     transform: translateY(-20px);
+  }
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
