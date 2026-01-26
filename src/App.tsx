@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Guidelines from "./pages/Guidelines";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:chatId" element={<Chat />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/guidelines" element={<Guidelines />} />
