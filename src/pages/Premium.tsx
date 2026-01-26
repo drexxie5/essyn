@@ -56,10 +56,42 @@ const Premium = () => {
 
     setLoading(true);
     
-    // In production, this would redirect to Flutterwave checkout
-    toast.info("Flutterwave integration coming soon! This is a demo.");
-    
-    setLoading(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            plan_type: selectedPlan,
+            user_email: session.user.email,
+            user_id: session.user.id,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.payment_link) {
+        window.location.href = data.payment_link;
+      } else {
+        throw new Error(data.error || 'Failed to create payment');
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast.error(error.message || "Payment failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

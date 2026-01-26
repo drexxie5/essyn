@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
-  Settings, LogOut, Camera, MapPin, Calendar, 
+  Settings, LogOut, MapPin, Calendar, 
   Shield, Crown, Edit2, Check, X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
+import ImageUpload from "@/components/ImageUpload";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -21,6 +22,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     bio: "",
@@ -54,6 +56,16 @@ const Profile = () => {
           bio: data.bio || "",
           city: data.city || "",
         });
+        
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        setIsAdmin(!!roleData);
       }
     } catch (error: any) {
       toast.error("Failed to load profile");
@@ -109,17 +121,24 @@ const Profile = () => {
         {/* Profile Header */}
         <div className="relative">
           <div className="flex flex-col items-center">
-            <div className="relative">
-              <Avatar className="w-24 h-24 border-4 border-primary/20">
-                <AvatarImage src={profile?.profile_image_url || ""} />
-                <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                  {profile?.username?.[0]?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <button className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground shadow-lg">
-                <Camera className="w-4 h-4" />
-              </button>
-            </div>
+            <ImageUpload
+              currentImage={profile?.profile_image_url}
+              onUpload={async (url) => {
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) return;
+                  
+                  await supabase
+                    .from("profiles")
+                    .update({ profile_image_url: url })
+                    .eq("id", session.user.id);
+                  
+                  setProfile(prev => prev ? { ...prev, profile_image_url: url } : null);
+                } catch (error) {
+                  console.error("Failed to update profile image:", error);
+                }
+              }}
+            />
             
             <h1 className="mt-4 text-xl font-display font-bold">
               {profile?.username}
@@ -231,6 +250,12 @@ const Profile = () => {
 
         {/* Settings Links */}
         <div className="glass rounded-2xl overflow-hidden">
+          {isAdmin && (
+            <Link to="/admin" className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors border-b border-border">
+              <Shield className="w-5 h-5 text-primary" />
+              <span className="flex-1 text-left font-medium text-primary">Admin Panel</span>
+            </Link>
+          )}
           <button className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors border-b border-border">
             <Settings className="w-5 h-5 text-muted-foreground" />
             <span className="flex-1 text-left">Settings</span>
