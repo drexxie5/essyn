@@ -1,20 +1,33 @@
 import { useState, useRef } from "react";
-import { Camera, Loader2, X } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ImageUploadProps {
   currentImage?: string | null;
   onUpload: (url: string) => void;
   className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
-export const ImageUpload = ({ currentImage, onUpload, className = "" }: ImageUploadProps) => {
+export const ImageUpload = ({ 
+  currentImage, 
+  onUpload, 
+  className = "",
+  size = "md"
+}: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Cloudinary configuration
   const cloudName = "duyvf9jwl";
-  const uploadPreset = "naughtyhooks_unsigned"; // Create this in Cloudinary dashboard
+  const uploadPreset = "naughtyhooks_unsigned";
+
+  const sizeClasses = {
+    sm: "w-16 h-16",
+    md: "w-24 h-24",
+    lg: "w-32 h-32"
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -31,7 +44,7 @@ export const ImageUpload = ({ currentImage, onUpload, className = "" }: ImageUpl
       return;
     }
 
-    // Show preview
+    // Show preview immediately
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -54,15 +67,31 @@ export const ImageUpload = ({ currentImage, onUpload, className = "" }: ImageUpl
 
       const data = await response.json();
 
+      if (data.error) {
+        console.error("Cloudinary error:", data.error);
+        
+        // More helpful error message
+        if (data.error.message?.includes("upload preset")) {
+          toast.error(
+            "Upload preset not configured. Please create 'naughtyhooks_unsigned' in Cloudinary settings.",
+            { duration: 6000 }
+          );
+        } else {
+          toast.error(`Upload failed: ${data.error.message}`);
+        }
+        setPreview(null);
+        return;
+      }
+
       if (data.secure_url) {
         onUpload(data.secure_url);
-        toast.success("Image uploaded!");
+        toast.success("Image uploaded successfully!");
       } else {
-        throw new Error("Upload failed");
+        throw new Error("No URL returned from upload");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload image. Please try again.");
       setPreview(null);
     } finally {
       setUploading(false);
@@ -70,6 +99,7 @@ export const ImageUpload = ({ currentImage, onUpload, className = "" }: ImageUpl
   };
 
   const displayImage = preview || currentImage;
+  const isPlaceholder = !displayImage || displayImage === "/placeholder.svg";
 
   return (
     <div className={`relative ${className}`}>
@@ -79,21 +109,25 @@ export const ImageUpload = ({ currentImage, onUpload, className = "" }: ImageUpl
         accept="image/*"
         onChange={handleFileChange}
         className="hidden"
+        capture="environment"
       />
       
       <div 
         onClick={() => !uploading && inputRef.current?.click()}
-        className="w-24 h-24 rounded-full bg-muted border-4 border-background cursor-pointer overflow-hidden relative group"
+        className={`${sizeClasses[size]} rounded-full bg-muted border-4 border-background cursor-pointer overflow-hidden relative group shadow-lg`}
       >
-        {displayImage ? (
+        {!isPlaceholder ? (
           <img 
             src={displayImage} 
             alt="Profile" 
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/placeholder.svg";
+            }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <Camera className="w-8 h-8" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-sensual">
+            <Camera className="w-8 h-8 text-white" />
           </div>
         )}
         
@@ -106,6 +140,13 @@ export const ImageUpload = ({ currentImage, onUpload, className = "" }: ImageUpl
           )}
         </div>
       </div>
+
+      {/* Upload hint */}
+      {isPlaceholder && !uploading && (
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          Tap to upload photo
+        </p>
+      )}
     </div>
   );
 };

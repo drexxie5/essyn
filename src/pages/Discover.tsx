@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { 
-  Heart, X, MapPin, MessageCircle, Crown, Filter, Lock
+  Heart, MapPin, MessageCircle, Crown, Filter, Lock, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Sheet,
   SheetContent,
@@ -23,15 +24,17 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 const Discover = () => {
   const navigate = useNavigate();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   
   // Filters
   const [ageRange, setAgeRange] = useState([18, 50]);
-  const [distanceKm, setDistanceKm] = useState(50);
+  const [distanceKm, setDistanceKm] = useState(100);
   const [genderFilter, setGenderFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -44,7 +47,6 @@ const Discover = () => {
       return;
     }
     
-    // Get current user's profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
@@ -54,6 +56,18 @@ const Discover = () => {
     if (profile) {
       setCurrentUserProfile(profile);
       fetchProfiles(profile);
+      fetchLikedProfiles(session.user.id);
+    }
+  };
+
+  const fetchLikedProfiles = async (userId: string) => {
+    const { data } = await supabase
+      .from("likes")
+      .select("liked_id")
+      .eq("liker_id", userId);
+    
+    if (data) {
+      setLikedProfiles(new Set(data.map(l => l.liked_id)));
     }
   };
 
@@ -68,17 +82,36 @@ const Discover = () => {
         .gte("age", ageRange[0])
         .lte("age", ageRange[1])
         .order("last_active", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (genderFilter !== "all" && ["male", "female", "non_binary", "other"].includes(genderFilter)) {
         query = query.eq("gender", genderFilter as "male" | "female" | "non_binary" | "other");
       }
 
+      if (cityFilter.trim()) {
+        query = query.ilike("city", `%${cityFilter.trim()}%`);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
-      setProfiles(data || []);
-      setCurrentIndex(0);
+      
+      // Filter by distance if user has location
+      let filteredProfiles = data || [];
+      if (userProfile.latitude && userProfile.longitude) {
+        filteredProfiles = filteredProfiles.filter(p => {
+          if (!p.latitude || !p.longitude) return true;
+          const distance = calculateDistance(
+            userProfile.latitude!,
+            userProfile.longitude!,
+            p.latitude,
+            p.longitude
+          );
+          return distance <= distanceKm;
+        });
+      }
+      
+      setProfiles(filteredProfiles);
     } catch (error: any) {
       toast.error("Failed to load profiles");
     } finally {
@@ -86,46 +119,63 @@ const Discover = () => {
     }
   };
 
-  const handleLike = () => {
-    if (!currentUserProfile?.is_premium) {
-      toast.error("Upgrade to Premium to like and message users!");
-      navigate("/premium");
-      return;
-    }
-    toast.success("Profile liked!");
-    nextProfile();
-  };
+  const handleLike = async (profile: Profile) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
-  const handlePass = () => {
-    nextProfile();
-  };
-
-  const nextProfile = () => {
-    if (currentIndex < profiles.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+    if (likedProfiles.has(profile.id)) {
+      // Unlike
+      await supabase
+        .from("likes")
+        .delete()
+        .eq("liker_id", session.user.id)
+        .eq("liked_id", profile.id);
+      
+      setLikedProfiles(prev => {
+        const next = new Set(prev);
+        next.delete(profile.id);
+        return next;
+      });
+      toast.success("Removed like");
     } else {
-      toast.info("You've seen all available profiles. Check back later!");
+      // Like
+      const { error } = await supabase
+        .from("likes")
+        .insert({
+          liker_id: session.user.id,
+          liked_id: profile.id,
+        });
+
+      if (!error) {
+        setLikedProfiles(prev => new Set(prev).add(profile.id));
+        toast.success(`You liked ${profile.username}!`);
+        
+        // Create notification for the liked user
+        await supabase.from("notifications").insert({
+          user_id: profile.id,
+          type: "like",
+          title: `${currentUserProfile?.username} liked you!`,
+          message: "Check out their profile",
+          related_user_id: session.user.id,
+        });
+      }
     }
   };
 
-  const handleMessage = async () => {
+  const handleMessage = async (profile: Profile) => {
     if (!currentUserProfile?.is_premium) {
       toast.error("Upgrade to Premium to send messages!");
       navigate("/premium");
       return;
     }
 
-    const profileToMessage = profiles[currentIndex];
-    if (!profileToMessage) return;
-
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Create or find chat
     const { data: existingChat } = await supabase
       .from("chats")
       .select("id")
-      .or(`and(user_one_id.eq.${session.user.id},user_two_id.eq.${profileToMessage.id}),and(user_one_id.eq.${profileToMessage.id},user_two_id.eq.${session.user.id})`)
+      .or(`and(user_one_id.eq.${session.user.id},user_two_id.eq.${profile.id}),and(user_one_id.eq.${profile.id},user_two_id.eq.${session.user.id})`)
       .maybeSingle();
 
     if (existingChat) {
@@ -135,7 +185,7 @@ const Discover = () => {
         .from("chats")
         .insert({
           user_one_id: session.user.id,
-          user_two_id: profileToMessage.id,
+          user_two_id: profile.id,
         })
         .select()
         .single();
@@ -152,8 +202,6 @@ const Discover = () => {
     }
   };
 
-  const displayProfile = profiles[currentIndex];
-
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -164,6 +212,14 @@ const Discover = () => {
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return Math.round(R * c);
+  };
+
+  const scrollLeft = () => {
+    scrollContainerRef.current?.scrollBy({ left: -300, behavior: "smooth" });
+  };
+
+  const scrollRight = () => {
+    scrollContainerRef.current?.scrollBy({ left: 300, behavior: "smooth" });
   };
 
   const FiltersContent = () => (
@@ -185,8 +241,17 @@ const Discover = () => {
           value={[distanceKm]}
           onValueChange={([val]) => setDistanceKm(val)}
           min={5}
-          max={200}
+          max={500}
           step={5}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Location / City</label>
+        <Input
+          placeholder="e.g. Lagos, Abuja, Onitsha"
+          value={cityFilter}
+          onChange={(e) => setCityFilter(e.target.value)}
         />
       </div>
 
@@ -216,7 +281,7 @@ const Discover = () => {
 
   return (
     <AppLayout title="Discover">
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-4xl mx-auto px-4 py-4">
         {/* Header with filters */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
@@ -254,105 +319,128 @@ const Discover = () => {
             <h2 className="text-xl font-display font-bold mb-2">No profiles found</h2>
             <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters</p>
           </div>
-        ) : displayProfile ? (
-          <div>
-            {/* Profile Card */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={displayProfile.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="relative rounded-3xl overflow-hidden glass"
-              >
-                {/* Profile Image */}
-                <div className="aspect-[3/4] relative bg-muted">
-                  <img
-                    src={displayProfile.profile_image_url || "/placeholder.svg"}
-                    alt={displayProfile.username}
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+        ) : (
+          <div className="relative">
+            {/* Scroll Navigation */}
+            <button
+              onClick={scrollLeft}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border flex items-center justify-center shadow-lg hover:bg-muted transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={scrollRight}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/90 border border-border flex items-center justify-center shadow-lg hover:bg-muted transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
 
-                  {/* Premium badge */}
-                  {displayProfile.is_premium && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-gold text-secondary-foreground text-xs font-medium">
-                      <Crown className="w-3 h-3" />
-                      Premium
-                    </div>
-                  )}
+            {/* Profiles Grid */}
+            <div
+              ref={scrollContainerRef}
+              className="flex gap-4 overflow-x-auto pb-4 px-8 snap-x snap-mandatory scrollbar-hide"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {profiles.map((profile, index) => (
+                <motion.div
+                  key={profile.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  className="flex-shrink-0 w-[280px] snap-center"
+                >
+                  <div className="relative rounded-2xl overflow-hidden glass border border-border">
+                    {/* Profile Image */}
+                    <div className="aspect-[3/4] relative bg-muted">
+                      <img
+                        src={profile.profile_image_url || "/placeholder.svg"}
+                        alt={profile.username}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                        }}
+                      />
+                      
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
 
-                  {/* Profile info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h2 className="text-2xl font-display font-bold mb-1">
-                      {displayProfile.username}, {displayProfile.age}
-                    </h2>
-                    <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                      <MapPin className="w-3 h-3" />
-                      <span>{displayProfile.city || "Nigeria"}</span>
-                      {currentUserProfile?.latitude && displayProfile.latitude && (
-                        <span>
-                          • {calculateDistance(
-                            currentUserProfile.latitude,
-                            currentUserProfile.longitude!,
-                            displayProfile.latitude,
-                            displayProfile.longitude!
-                          )} km
-                        </span>
+                      {/* Premium badge */}
+                      {profile.is_premium && (
+                        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-gold text-secondary-foreground text-xs font-medium">
+                          <Crown className="w-3 h-3" />
+                          Premium
+                        </div>
                       )}
+
+                      {/* Profile info */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h2 className="text-xl font-display font-bold text-foreground">
+                          {profile.username}, {profile.age}
+                        </h2>
+                        <div className="flex items-center gap-1 text-muted-foreground text-sm mt-1">
+                          <MapPin className="w-3 h-3" />
+                          <span>{profile.city || "Nigeria"}</span>
+                          {currentUserProfile?.latitude && profile.latitude && (
+                            <span className="ml-1">
+                              • {calculateDistance(
+                                currentUserProfile.latitude,
+                                currentUserProfile.longitude!,
+                                profile.latitude,
+                                profile.longitude!
+                              )} km
+                            </span>
+                          )}
+                        </div>
+                        {profile.bio && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
+                            {profile.bio}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    {displayProfile.bio && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {displayProfile.bio}
-                      </p>
-                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-center gap-2 p-3 bg-card">
+                      <Button
+                        size="sm"
+                        variant={likedProfiles.has(profile.id) ? "default" : "outline"}
+                        className={`flex-1 ${likedProfiles.has(profile.id) ? "bg-primary" : ""}`}
+                        onClick={() => handleLike(profile)}
+                      >
+                        <Heart className={`w-4 h-4 mr-1 ${likedProfiles.has(profile.id) ? "fill-current" : ""}`} />
+                        {likedProfiles.has(profile.id) ? "Liked" : "Like"}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleMessage(profile)}
+                      >
+                        {currentUserProfile?.is_premium ? (
+                          <>
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            Chat
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4 mr-1" />
+                            Chat
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Action buttons */}
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full w-14 h-14 p-0"
-                onClick={handlePass}
-              >
-                <X className="w-6 h-6" />
-              </Button>
-
-              <Button
-                size="lg"
-                className="rounded-full w-16 h-16 p-0 bg-gradient-sensual hover:opacity-90"
-                onClick={handleLike}
-              >
-                <Heart className="w-7 h-7 text-white" />
-              </Button>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full w-14 h-14 p-0 border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground"
-                onClick={handleMessage}
-              >
-                {currentUserProfile?.is_premium ? (
-                  <MessageCircle className="w-6 h-6" />
-                ) : (
-                  <Lock className="w-5 h-5" />
-                )}
-              </Button>
+                </motion.div>
+              ))}
             </div>
 
-            {/* Profile counter */}
-            <p className="text-center text-muted-foreground mt-3 text-xs">
-              {currentIndex + 1} of {profiles.length}
+            {/* Profile count */}
+            <p className="text-center text-muted-foreground text-sm mt-2">
+              Scroll to see more profiles
             </p>
           </div>
-        ) : null}
+        )}
 
         {/* Premium CTA for non-premium users */}
         {!currentUserProfile?.is_premium && !loading && (
