@@ -1,0 +1,89 @@
+import { ReactNode, useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import BottomNav from "./BottomNav";
+import { Flame } from "lucide-react";
+import { Link } from "react-router-dom";
+
+interface AppLayoutProps {
+  children: ReactNode;
+  showNav?: boolean;
+  showHeader?: boolean;
+  title?: string;
+}
+
+export const AppLayout = ({ 
+  children, 
+  showNav = true, 
+  showHeader = true,
+  title 
+}: AppLayoutProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+      setLoading(false);
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      if (event === 'SIGNED_OUT') {
+        navigate('/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  // Pages that don't require auth
+  const publicPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/guidelines'];
+  const isPublicPath = publicPaths.includes(location.pathname);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse">
+          <Flame className="w-12 h-12 text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated and not on public path
+  if (!user && !isPublicPath) {
+    navigate('/login');
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {showHeader && (
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+          <div className="flex items-center justify-between h-14 px-4 max-w-lg mx-auto">
+            <Link to="/" className="flex items-center gap-2">
+              <Flame className="w-6 h-6 text-primary" />
+              <span className="text-lg font-display font-bold text-gradient">
+                {title || "NaughtyHooks"}
+              </span>
+            </Link>
+          </div>
+        </header>
+      )}
+      
+      <main className={`flex-1 ${showNav ? 'pb-20' : ''}`}>
+        {children}
+      </main>
+
+      {showNav && user && <BottomNav />}
+    </div>
+  );
+};
+
+export default AppLayout;

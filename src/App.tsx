@@ -8,6 +8,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Discover from "./pages/Discover";
 import Premium from "./pages/Premium";
+import Profile from "./pages/Profile";
+import Chats from "./pages/Chats";
+import Chat from "./pages/Chat";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Guidelines from "./pages/Guidelines";
@@ -27,6 +30,9 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/discover" element={<Discover />} />
           <Route path="/premium" element={<Premium />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/chats" element={<Chats />} />
+          <Route path="/chat/:chatId" element={<Chat />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/guidelines" element={<Guidelines />} />
