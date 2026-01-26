@@ -11,6 +11,7 @@ import Premium from "./pages/Premium";
 import Profile from "./pages/Profile";
 import Chats from "./pages/Chats";
 import Chat from "./pages/Chat";
+import Admin from "./pages/Admin";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Guidelines from "./pages/Guidelines";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:chatId" element={<Chat />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/guidelines" element={<Guidelines />} />
