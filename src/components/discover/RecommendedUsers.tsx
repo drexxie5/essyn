@@ -66,12 +66,21 @@ const RecommendedUsers = ({
   const fetchRecommendedUsers = async () => {
     setLoading(true);
     try {
+      // Show opposite gender by default (males see females, females see males)
+      const oppositeGender = currentUserProfile.gender === "male" ? "female" : 
+                             currentUserProfile.gender === "female" ? "male" : null;
+      
       let query = supabase
         .from("profiles")
         .select("*")
         .neq("id", currentUserProfile.id)
         .eq("is_banned", false)
         .order("created_at", { ascending: false });
+
+      // Apply opposite gender filter
+      if (oppositeGender) {
+        query = query.eq("gender", oppositeGender);
+      }
 
       if (stateFilter.trim()) {
         query = query.ilike("city", `%${stateFilter.trim()}%`);
