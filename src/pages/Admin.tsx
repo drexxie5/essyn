@@ -5,13 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, AlertTriangle, CreditCard, Search, Ban, Check, 
   Crown, Trash2, Shield, Calendar, ArrowLeft, BarChart3, 
-  MessageCircle, Heart, TrendingUp, Eye
+  MessageCircle, Heart, TrendingUp, Eye, BadgeCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { format, subDays } from "date-fns";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -255,6 +256,23 @@ const Admin = () => {
     }
   };
 
+  const toggleVerification = async (userId: string, currentlyVerified: boolean) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ 
+        is_verified: !currentlyVerified,
+        verification_expires: !currentlyVerified ? null : null, // Admin verification is permanent
+      })
+      .eq("id", userId);
+
+    if (error) {
+      toast.error("Failed to update verification status");
+    } else {
+      toast.success(currentlyVerified ? "Verification removed" : "User verified!");
+      fetchUsers();
+    }
+  };
+
   const resolveReport = async (reportId: string) => {
     const { error } = await supabase
       .from("reports")
@@ -458,6 +476,7 @@ const Admin = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">{user.username}</span>
+                            {(user as any).is_verified && <VerifiedBadge size="sm" />}
                             {user.is_premium && (
                               <span className="px-2 py-0.5 rounded-full bg-gradient-gold text-secondary-foreground text-xs">
                                 Premium
@@ -535,6 +554,27 @@ const Admin = () => {
                           >
                             <Trash2 className="w-3 h-3 mr-1" />
                             Remove Images
+                          </Button>
+                        )}
+
+                        {(user as any).is_verified ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleVerification(user.id, true)}
+                          >
+                            <BadgeCheck className="w-3 h-3 mr-1" />
+                            Unverify
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                            onClick={() => toggleVerification(user.id, false)}
+                          >
+                            <BadgeCheck className="w-3 h-3 mr-1" />
+                            Verify
                           </Button>
                         )}
 

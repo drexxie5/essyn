@@ -82,6 +82,7 @@ export type Database = {
           chat_id: string
           created_at: string | null
           id: string
+          is_read: boolean
           message_text: string
           message_type: Database["public"]["Enums"]["message_type"] | null
           sender_id: string
@@ -90,6 +91,7 @@ export type Database = {
           chat_id: string
           created_at?: string | null
           id?: string
+          is_read?: boolean
           message_text: string
           message_type?: Database["public"]["Enums"]["message_type"] | null
           sender_id: string
@@ -98,6 +100,7 @@ export type Database = {
           chat_id?: string
           created_at?: string | null
           id?: string
+          is_read?: boolean
           message_text?: string
           message_type?: Database["public"]["Enums"]["message_type"] | null
           sender_id?: string
@@ -193,6 +196,7 @@ export type Database = {
           interests: string[] | null
           is_banned: boolean | null
           is_premium: boolean | null
+          is_verified: boolean
           last_active: string | null
           latitude: number | null
           longitude: number | null
@@ -205,6 +209,7 @@ export type Database = {
             | null
           subscription_start: string | null
           username: string
+          verification_expires: string | null
         }
         Insert: {
           age: number
@@ -220,6 +225,7 @@ export type Database = {
           interests?: string[] | null
           is_banned?: boolean | null
           is_premium?: boolean | null
+          is_verified?: boolean
           last_active?: string | null
           latitude?: number | null
           longitude?: number | null
@@ -232,6 +238,7 @@ export type Database = {
             | null
           subscription_start?: string | null
           username: string
+          verification_expires?: string | null
         }
         Update: {
           age?: number
@@ -247,6 +254,7 @@ export type Database = {
           interests?: string[] | null
           is_banned?: boolean | null
           is_premium?: boolean | null
+          is_verified?: boolean
           last_active?: string | null
           latitude?: number | null
           longitude?: number | null
@@ -259,6 +267,7 @@ export type Database = {
             | null
           subscription_start?: string | null
           username?: string
+          verification_expires?: string | null
         }
         Relationships: []
       }
@@ -323,7 +332,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       gender_type: "male" | "female" | "non_binary" | "other"
-      message_type: "text" | "image"
+      message_type: "text" | "image" | "voice"
       subscription_plan_type: "weekly" | "monthly"
     }
     CompositeTypes: {
@@ -454,7 +463,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       gender_type: ["male", "female", "non_binary", "other"],
-      message_type: ["text", "image"],
+      message_type: ["text", "image", "voice"],
       subscription_plan_type: ["weekly", "monthly"],
     },
   },
