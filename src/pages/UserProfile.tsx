@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, MessageCircle, MapPin, Calendar, Crown, Flag, Lock, Sparkles, User } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, MapPin, Calendar, Crown, Flag, Lock, Sparkles, User, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
@@ -24,7 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  hobbies?: string[];
+  interests?: string[];
+  looking_for?: string;
+};
 
 const UserProfile = () => {
   const { userId } = useParams();
@@ -362,7 +367,7 @@ const UserProfile = () => {
                   <p className="font-medium capitalize">{profile.gender?.replace("_", " ")}</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Looking for</span>
+                  <span className="text-xs text-muted-foreground">Interested In</span>
                   <p className="font-medium capitalize">
                     {profile.interested_in === "male" ? "Men" : 
                      profile.interested_in === "female" ? "Women" : 
@@ -375,6 +380,47 @@ const UserProfile = () => {
                 </div>
               </div>
             </div>
+
+            {/* Looking For */}
+            {(profile as Profile).looking_for && (
+              <div className="glass rounded-xl p-4">
+                <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  Looking For
+                </h2>
+                <p className="text-sm font-medium">{(profile as Profile).looking_for}</p>
+              </div>
+            )}
+
+            {/* Hobbies */}
+            {((profile as Profile).hobbies || []).length > 0 && (
+              <div className="glass rounded-xl p-4">
+                <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                  <Heart className="w-4 h-4" />
+                  Hobbies
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {((profile as Profile).hobbies || []).map((hobby) => (
+                    <Badge key={hobby} variant="secondary">{hobby}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Interests */}
+            {((profile as Profile).interests || []).length > 0 && (
+              <div className="glass rounded-xl p-4">
+                <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Interests
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {((profile as Profile).interests || []).map((interest) => (
+                    <Badge key={interest} variant="secondary">{interest}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="glass rounded-xl p-4">
               <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
