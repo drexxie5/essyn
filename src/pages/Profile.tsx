@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Settings, LogOut, MapPin, Calendar, 
-  Shield, Crown, Edit2, Check, X
+  Shield, Crown, Edit2, Check, X, Image as ImageIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import ImageUpload from "@/components/ImageUpload";
+import MultiImageUpload from "@/components/MultiImageUpload";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -161,7 +162,34 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Edit Form */}
+        {/* Additional Photos */}
+        <div className="glass rounded-2xl p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-primary" />
+            <h2 className="font-display font-semibold">Your Photos</h2>
+          </div>
+          <MultiImageUpload
+            images={profile?.profile_images || []}
+            maxImages={3}
+            onUpload={async (urls) => {
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                const { error } = await supabase
+                  .from("profiles")
+                  .update({ profile_images: urls })
+                  .eq("id", session.user.id);
+
+                if (error) throw error;
+                setProfile(prev => prev ? { ...prev, profile_images: urls } : null);
+              } catch (error) {
+                console.error("Failed to update photos:", error);
+                toast.error("Failed to update photos");
+              }
+            }}
+          />
+        </div>
         <div className="glass rounded-2xl p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display font-semibold">Profile Info</h2>
@@ -256,11 +284,17 @@ const Profile = () => {
               <span className="flex-1 text-left font-medium text-primary">Admin Panel</span>
             </Link>
           )}
-          <button className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors border-b border-border">
+          <button 
+            onClick={() => navigate("/settings")}
+            className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors border-b border-border"
+          >
             <Settings className="w-5 h-5 text-muted-foreground" />
             <span className="flex-1 text-left">Settings</span>
           </button>
-          <button className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors border-b border-border">
+          <button 
+            onClick={() => navigate("/privacy-safety")}
+            className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors border-b border-border"
+          >
             <Shield className="w-5 h-5 text-muted-foreground" />
             <span className="flex-1 text-left">Privacy & Safety</span>
           </button>

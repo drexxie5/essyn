@@ -142,6 +142,17 @@ const Chat = () => {
         }
       } else {
         setNewMessage("");
+        
+        // Create notification for the other user
+        if (otherUser) {
+          await supabase.from("notifications").insert({
+            user_id: otherUser.id,
+            type: "message",
+            title: "New message!",
+            message: newMessage.trim().slice(0, 50) + (newMessage.length > 50 ? "..." : ""),
+            related_user_id: currentUserId,
+          });
+        }
       }
     } catch (error: any) {
       toast.error("Failed to send message");

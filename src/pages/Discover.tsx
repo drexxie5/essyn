@@ -4,7 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { 
-  Heart, MapPin, MessageCircle, Crown, Filter, Lock, ChevronLeft, ChevronRight
+  Heart, MapPin, MessageCircle, Crown, Filter, Lock, ChevronLeft, ChevronRight, Search, User
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,7 @@ const Discover = () => {
   const [distanceKm, setDistanceKm] = useState(100);
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -74,6 +75,9 @@ const Discover = () => {
   const fetchProfiles = async (userProfile: Profile) => {
     setLoading(true);
     try {
+      // Use user's interested_in preference for filtering
+      const preferredGender = userProfile.interested_in;
+      
       let query = supabase
         .from("profiles")
         .select("*")
@@ -84,6 +88,12 @@ const Discover = () => {
         .order("last_active", { ascending: false })
         .limit(50);
 
+      // Filter by user's preference (interested_in) unless they selected "other" (everyone)
+      if (preferredGender && preferredGender !== "other") {
+        query = query.eq("gender", preferredGender);
+      }
+      
+      // Additional manual filter if user selects in the filter panel
       if (genderFilter !== "all" && ["male", "female", "non_binary", "other"].includes(genderFilter)) {
         query = query.eq("gender", genderFilter as "male" | "female" | "non_binary" | "other");
       }
@@ -279,13 +289,29 @@ const Discover = () => {
     </div>
   );
 
+  // Filter profiles by search term
+  const filteredProfiles = profiles.filter(
+    (p) => p.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <AppLayout title="Discover">
       <div className="max-w-4xl mx-auto px-4 py-4">
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
         {/* Header with filters */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {profiles.length} people nearby
+            {filteredProfiles.length} people nearby
           </p>
           <Sheet>
             <SheetTrigger asChild>
@@ -311,13 +337,13 @@ const Discover = () => {
               <p className="text-muted-foreground">Finding matches near you...</p>
             </div>
           </div>
-        ) : profiles.length === 0 ? (
+        ) : filteredProfiles.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] text-center">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
               <Heart className="w-10 h-10 text-muted-foreground" />
             </div>
             <h2 className="text-xl font-display font-bold mb-2">No profiles found</h2>
-            <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters</p>
+            <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters or search</p>
           </div>
         ) : (
           <div className="relative">
@@ -341,7 +367,7 @@ const Discover = () => {
               className="flex gap-4 overflow-x-auto pb-4 px-8 snap-x snap-mandatory scrollbar-hide"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              {profiles.map((profile, index) => (
+              {filteredProfiles.map((profile, index) => (
                 <motion.div
                   key={profile.id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -350,8 +376,11 @@ const Discover = () => {
                   className="flex-shrink-0 w-[280px] snap-center"
                 >
                   <div className="relative rounded-2xl overflow-hidden glass border border-border">
-                    {/* Profile Image */}
-                    <div className="aspect-[3/4] relative bg-muted">
+                    {/* Profile Image - Clickable to view profile */}
+                    <div 
+                      className="aspect-[3/4] relative bg-muted cursor-pointer"
+                      onClick={() => navigate(`/user/${profile.id}`)}
+                    >
                       <img
                         src={profile.profile_image_url || "/placeholder.svg"}
                         alt={profile.username}
@@ -371,6 +400,17 @@ const Discover = () => {
                           Premium
                         </div>
                       )}
+
+                      {/* View Profile Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/user/${profile.id}`);
+                        }}
+                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center hover:bg-background transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                      </button>
 
                       {/* Profile info */}
                       <div className="absolute bottom-0 left-0 right-0 p-4">

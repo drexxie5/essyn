@@ -180,7 +180,8 @@ const Notifications = () => {
                 onClick={() => {
                   markAsRead(notif.id);
                   if (notif.related_user_id) {
-                    navigate("/discover");
+                    // Navigate to user's profile page
+                    navigate(`/user/${notif.related_user_id}`);
                   }
                 }}
                 className={`w-full flex items-start gap-3 p-4 rounded-xl transition-colors text-left ${

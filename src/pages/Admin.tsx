@@ -4,24 +4,44 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, AlertTriangle, CreditCard, Search, Ban, Check, 
-  Crown, Trash2, Shield, Calendar, ArrowLeft
+  Crown, Trash2, Shield, Calendar, ArrowLeft, BarChart3, 
+  MessageCircle, Heart, TrendingUp, Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type Report = Database['public']['Tables']['reports']['Row'];
 type Payment = Database['public']['Tables']['payments']['Row'];
 
+interface DashboardStats {
+  totalUsers: number;
+  premiumUsers: number;
+  newUsersToday: number;
+  totalRevenue: number;
+  activeChats: number;
+  totalLikes: number;
+  pendingReports: number;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    premiumUsers: 0,
+    newUsersToday: 0,
+    totalRevenue: 0,
+    activeChats: 0,
+    totalLikes: 0,
+    pendingReports: 0,
+  });
   
   // Data states
   const [users, setUsers] = useState<Profile[]>([]);
@@ -58,8 +78,68 @@ const Admin = () => {
 
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([fetchUsers(), fetchReports(), fetchPayments()]);
+    await Promise.all([fetchUsers(), fetchReports(), fetchPayments(), fetchStats()]);
     setLoading(false);
+  };
+
+  const fetchStats = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Get total users
+      const { count: totalUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      // Get premium users
+      const { count: premiumUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("is_premium", true);
+
+      // Get new users today
+      const { count: newUsersToday } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", today.toISOString());
+
+      // Get total revenue
+      const { data: paymentsData } = await supabase
+        .from("payments")
+        .select("amount")
+        .eq("status", "completed");
+      
+      const totalRevenue = paymentsData?.reduce((sum, p) => sum + p.amount, 0) || 0;
+
+      // Get active chats
+      const { count: activeChats } = await supabase
+        .from("chats")
+        .select("*", { count: "exact", head: true });
+
+      // Get total likes
+      const { count: totalLikes } = await supabase
+        .from("likes")
+        .select("*", { count: "exact", head: true });
+
+      // Get pending reports
+      const { count: pendingReports } = await supabase
+        .from("reports")
+        .select("*", { count: "exact", head: true })
+        .eq("resolved", false);
+
+      setStats({
+        totalUsers: totalUsers || 0,
+        premiumUsers: premiumUsers || 0,
+        newUsersToday: newUsersToday || 0,
+        totalRevenue,
+        activeChats: activeChats || 0,
+        totalLikes: totalLikes || 0,
+        pendingReports: pendingReports || 0,
+      });
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
   };
 
   const fetchUsers = async () => {
@@ -122,6 +202,7 @@ const Admin = () => {
     } else {
       toast.success(currentlyBanned ? "User unbanned" : "User banned");
       fetchUsers();
+      fetchStats();
     }
   };
 
@@ -150,6 +231,7 @@ const Admin = () => {
     } else {
       toast.success(`Premium ${planType} granted!`);
       fetchUsers();
+      fetchStats();
     }
   };
 
@@ -169,6 +251,7 @@ const Admin = () => {
     } else {
       toast.success("Premium revoked");
       fetchUsers();
+      fetchStats();
     }
   };
 
@@ -183,20 +266,43 @@ const Admin = () => {
     } else {
       toast.success("Report resolved");
       fetchReports();
+      fetchStats();
     }
   };
 
   const removeProfileImage = async (userId: string) => {
     const { error } = await supabase
       .from("profiles")
-      .update({ profile_image_url: "/placeholder.svg" })
+      .update({ profile_image_url: "/placeholder.svg", profile_images: [] })
       .eq("id", userId);
 
     if (error) {
       toast.error("Failed to remove image");
     } else {
-      toast.success("Profile image removed");
+      toast.success("Profile images removed");
       fetchUsers();
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    // First delete related data
+    await Promise.all([
+      supabase.from("likes").delete().or(`liker_id.eq.${userId},liked_id.eq.${userId}`),
+      supabase.from("notifications").delete().eq("user_id", userId),
+      supabase.from("reports").delete().or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`),
+    ]);
+
+    // Delete profile
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", userId);
+
+    if (error) {
+      toast.error("Failed to delete user");
+    } else {
+      toast.success("User deleted");
+      fetchAllData();
     }
   };
 
@@ -224,7 +330,7 @@ const Admin = () => {
     <AppLayout showNav={false} showHeader={false}>
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-          <div className="flex items-center gap-3 h-14 px-4 max-w-4xl mx-auto">
+          <div className="flex items-center gap-3 h-14 px-4 max-w-6xl mx-auto">
             <button onClick={() => navigate("/profile")} className="p-2 -ml-2">
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -233,16 +339,89 @@ const Admin = () => {
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto px-4 py-6">
+        <main className="max-w-6xl mx-auto px-4 py-6">
+          {/* Dashboard Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Total Users</span>
+              </div>
+              <p className="text-2xl font-bold">{stats.totalUsers}</p>
+              <p className="text-xs text-green-500">+{stats.newUsersToday} today</p>
+            </div>
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-4 h-4 text-secondary" />
+                <span className="text-xs text-muted-foreground">Premium</span>
+              </div>
+              <p className="text-2xl font-bold">{stats.premiumUsers}</p>
+              <p className="text-xs text-muted-foreground">{((stats.premiumUsers / stats.totalUsers) * 100 || 0).toFixed(1)}% of users</p>
+            </div>
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-green-500" />
+                <span className="text-xs text-muted-foreground">Revenue</span>
+              </div>
+              <p className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">All time</p>
+            </div>
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+                <span className="text-xs text-muted-foreground">Pending Reports</span>
+              </div>
+              <p className="text-2xl font-bold">{stats.pendingReports}</p>
+              <p className="text-xs text-muted-foreground">Needs review</p>
+            </div>
+          </div>
+
+          {/* Additional Stats Row */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="glass rounded-xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Heart className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats.totalLikes}</p>
+                <p className="text-xs text-muted-foreground">Total Likes</p>
+              </div>
+            </div>
+            <div className="glass rounded-xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{stats.activeChats}</p>
+                <p className="text-xs text-muted-foreground">Active Chats</p>
+              </div>
+            </div>
+            <div className="glass rounded-xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-secondary" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{payments.length}</p>
+                <p className="text-xs text-muted-foreground">Transactions</p>
+              </div>
+            </div>
+          </div>
+
           <Tabs defaultValue="users" className="space-y-4">
             <TabsList className="grid grid-cols-3 w-full">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Users</span>
+                <span className="sm:hidden">({users.length})</span>
               </TabsTrigger>
               <TabsTrigger value="reports" className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 <span className="hidden sm:inline">Reports</span>
+                {stats.pendingReports > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground text-xs">
+                    {stats.pendingReports}
+                  </span>
+                )}
               </TabsTrigger>
               <TabsTrigger value="payments" className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4" />
@@ -255,7 +434,7 @@ const Admin = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search users..."
+                  placeholder="Search users by name, email, or city..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -292,9 +471,21 @@ const Admin = () => {
                           </div>
                           <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                           <p className="text-xs text-muted-foreground">
-                            {user.city} • {user.age}yo • {user.gender}
+                            {user.city} • {user.age}yo • {user.gender} • Interested in: {user.interested_in}
                           </p>
+                          {user.subscription_expires && (
+                            <p className="text-xs text-muted-foreground">
+                              Expires: {format(new Date(user.subscription_expires), "PPp")}
+                            </p>
+                          )}
                         </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => navigate(`/user/${user.id}`)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                       </div>
 
                       <div className="flex flex-wrap gap-2 mt-3">
@@ -343,9 +534,22 @@ const Admin = () => {
                             onClick={() => removeProfileImage(user.id)}
                           >
                             <Trash2 className="w-3 h-3 mr-1" />
-                            Remove Image
+                            Remove Images
                           </Button>
                         )}
+
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (confirm(`Delete ${user.username}? This cannot be undone.`)) {
+                              deleteUser(user.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -403,6 +607,14 @@ const Admin = () => {
                             Ban User
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/user/${report.reported_user_id}`)}
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          View Profile
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -420,9 +632,16 @@ const Admin = () => {
                 payments.map((payment) => (
                   <div key={payment.id} className="glass rounded-xl p-4">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{payment.user?.username || "Unknown"}</p>
-                        <p className="text-sm text-muted-foreground">{payment.user?.email}</p>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={payment.user?.profile_image_url || "/placeholder.svg"}
+                          alt=""
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="font-medium">{payment.user?.username || "Unknown"}</p>
+                          <p className="text-sm text-muted-foreground">{payment.user?.email}</p>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-green-500">
@@ -439,6 +658,7 @@ const Admin = () => {
                       }`}>
                         {payment.status}
                       </span>
+                      <span>TX: {payment.flutterwave_transaction_id}</span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {format(new Date(payment.created_at!), "PPp")}

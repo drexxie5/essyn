@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Flame, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle } from "lucide-react";
+import { Flame, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle, Camera, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,10 +16,14 @@ const nigerianCities = [
   "Abeokuta", "Onitsha", "Warri", "Sokoto", "Calabar", "Uyo", "Kaduna"
 ];
 
+const CLOUDINARY_CLOUD_NAME = "duyvf9jwl";
+const CLOUDINARY_UPLOAD_PRESET = "naughtyhooks_unsigned";
+
 const Signup = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   
@@ -34,6 +38,7 @@ const Signup = () => {
     city: "",
     latitude: 0,
     longitude: 0,
+    profileImageUrl: "",
     agreeTerms: false,
     confirmAge: false,
   });
@@ -79,6 +84,52 @@ const Signup = () => {
     );
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+      formDataUpload.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      formDataUpload.append("folder", "naughtyhooks/profiles");
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formDataUpload,
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.secure_url) {
+        setFormData(prev => ({ ...prev, profileImageUrl: data.secure_url }));
+        toast.success("Photo uploaded!");
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -89,6 +140,11 @@ const Signup = () => {
 
     if (parseInt(formData.age) < 18) {
       toast.error("You must be 18 or older");
+      return;
+    }
+
+    if (!formData.profileImageUrl) {
+      toast.error("Please upload a profile photo");
       return;
     }
 
@@ -115,6 +171,7 @@ const Signup = () => {
         city: formData.city,
         latitude: formData.latitude,
         longitude: formData.longitude,
+        profile_image_url: formData.profileImageUrl,
       });
 
       if (profileError) throw profileError;
@@ -142,7 +199,7 @@ const Signup = () => {
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-6">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
               className={`h-1.5 rounded-full transition-all ${
@@ -338,6 +395,70 @@ const Signup = () => {
 
           {step === 3 && (
             <>
+              <h1 className="text-xl font-display font-bold text-center">Add Your Photo</h1>
+              <p className="text-muted-foreground text-center text-sm mb-4">A profile photo is required</p>
+
+              <div className="flex flex-col items-center">
+                <label className="relative cursor-pointer group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                  />
+                  <div className={`w-32 h-32 rounded-full overflow-hidden border-4 transition-colors ${
+                    formData.profileImageUrl ? "border-primary" : "border-dashed border-muted-foreground/30"
+                  }`}>
+                    {formData.profileImageUrl ? (
+                      <img
+                        src={formData.profileImageUrl}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex flex-col items-center justify-center">
+                        {uploadingPhoto ? (
+                          <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                        ) : (
+                          <>
+                            <Camera className="w-8 h-8 text-muted-foreground mb-1" />
+                            <span className="text-xs text-muted-foreground">Add Photo</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {formData.profileImageUrl && (
+                    <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                      <Camera className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  )}
+                </label>
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  Tap to upload • Max 5MB • JPG, PNG
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button type="button" variant="outline" size="lg" onClick={() => setStep(2)} className="flex-1">
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setStep(4)}
+                  disabled={!formData.profileImageUrl}
+                >
+                  Continue
+                </Button>
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
               <h1 className="text-xl font-display font-bold text-center">Almost Done!</h1>
               <p className="text-muted-foreground text-center text-sm mb-4">Add a bio and accept terms</p>
 
@@ -382,7 +503,7 @@ const Signup = () => {
               </div>
 
               <div className="flex gap-3">
-                <Button type="button" variant="outline" size="lg" onClick={() => setStep(2)} className="flex-1">
+                <Button type="button" variant="outline" size="lg" onClick={() => setStep(3)} className="flex-1">
                   Back
                 </Button>
                 <Button
