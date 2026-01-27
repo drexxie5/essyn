@@ -103,7 +103,9 @@ const Discover = () => {
   const fetchProfiles = async (userProfile: Profile) => {
     setLoading(true);
     try {
-      const preferredGender = userProfile.interested_in;
+      // Show opposite gender by default (males see females, females see males)
+      const oppositeGender = userProfile.gender === "male" ? "female" : 
+                             userProfile.gender === "female" ? "male" : null;
       
       let query = supabase
         .from("profiles")
@@ -114,10 +116,12 @@ const Discover = () => {
         .lte("age", ageRange[1])
         .order("last_active", { ascending: false });
 
-      if (preferredGender && preferredGender !== "other") {
-        query = query.eq("gender", preferredGender);
+      // Apply opposite gender filter by default
+      if (oppositeGender) {
+        query = query.eq("gender", oppositeGender);
       }
       
+      // Override with manual filter if set
       if (genderFilter !== "all" && ["male", "female", "non_binary", "other"].includes(genderFilter)) {
         query = query.eq("gender", genderFilter as "male" | "female" | "non_binary" | "other");
       }
