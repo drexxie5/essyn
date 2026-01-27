@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, MessageCircle, User, Crown, Bell, Heart } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ const navItems = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
-export const BottomNav = memo(() => {
+export const BottomNav = () => {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -105,8 +105,6 @@ export const BottomNav = memo(() => {
       </div>
     </nav>
   );
-});
-
-BottomNav.displayName = "BottomNav";
+};
 
 export default BottomNav;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Crown, Check, MessageCircle, Heart, Zap, ArrowLeft, BadgeCheck, Shield } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const Premium = memo(() => {
+const Premium = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedPremiumPlan, setSelectedPremiumPlan] = useState<"weekly" | "monthly">("monthly");
@@ -398,8 +398,6 @@ const Premium = memo(() => {
       </div>
     </AppLayout>
   );
-});
-
-Premium.displayName = "Premium";
+};
 
 export default Premium;

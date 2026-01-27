@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, memo, useCallback } from "react";
+import { ReactNode, useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "./BottomNav";
@@ -12,7 +12,7 @@ interface AppLayoutProps {
   title?: string;
 }
 
-export const AppLayout = memo(({ 
+export const AppLayout = ({ 
   children, 
   showNav = true, 
   showHeader = true,
@@ -122,8 +122,6 @@ export const AppLayout = memo(({
       {showNav && user && <BottomNav />}
     </div>
   );
-});
-
-AppLayout.displayName = "AppLayout";
+};
 
 export default AppLayout;
