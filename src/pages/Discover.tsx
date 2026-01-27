@@ -363,14 +363,26 @@ const Discover = () => {
                 useDistanceFilter={useDistanceFilter}
                 setUseDistanceFilter={setUseDistanceFilter}
                 onApply={() => currentUserProfile && fetchProfiles(currentUserProfile)}
-                onLocationUpdate={async (lat, lng) => {
+                onLocationUpdate={async (lat, lng, fullLocation) => {
                   // Update user's location in database when they use live location
                   if (currentUserProfile) {
+                    const updateData: { latitude: number; longitude: number; city?: string } = { 
+                      latitude: lat, 
+                      longitude: lng 
+                    };
+                    if (fullLocation) {
+                      updateData.city = fullLocation;
+                    }
                     await supabase
                       .from("profiles")
-                      .update({ latitude: lat, longitude: lng })
+                      .update(updateData)
                       .eq("id", currentUserProfile.id);
-                    setCurrentUserProfile({ ...currentUserProfile, latitude: lat, longitude: lng });
+                    setCurrentUserProfile({ 
+                      ...currentUserProfile, 
+                      latitude: lat, 
+                      longitude: lng,
+                      city: fullLocation || currentUserProfile.city
+                    });
                   }
                 }}
               />

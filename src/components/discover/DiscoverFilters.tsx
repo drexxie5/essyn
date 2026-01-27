@@ -2,10 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Navigation } from "lucide-react";
 import StateSelector from "@/components/StateSelector";
+import LocationPermissionDialog from "@/components/LocationPermissionDialog";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface DiscoverFiltersProps {
   ageRange: number[];
@@ -19,7 +20,7 @@ interface DiscoverFiltersProps {
   useDistanceFilter: boolean;
   setUseDistanceFilter: (value: boolean) => void;
   onApply: () => void;
-  onLocationUpdate?: (lat: number, lng: number) => void;
+  onLocationUpdate?: (lat: number, lng: number, fullLocation: string | null) => void;
 }
 
 const DiscoverFilters = ({
@@ -36,12 +37,17 @@ const DiscoverFilters = ({
   onApply,
   onLocationUpdate,
 }: DiscoverFiltersProps) => {
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  
   const { 
     latitude, 
     longitude, 
+    city,
     state, 
+    fullLocation,
     loading: locationLoading, 
     error: locationError,
+    permissionDenied,
     fetchLocation,
     hasLocation 
   } = useGeolocation();
@@ -49,23 +55,43 @@ const DiscoverFilters = ({
   // Update parent with location when available
   useEffect(() => {
     if (latitude && longitude && onLocationUpdate) {
-      onLocationUpdate(latitude, longitude);
+      onLocationUpdate(latitude, longitude, fullLocation);
     }
-  }, [latitude, longitude, onLocationUpdate]);
+  }, [latitude, longitude, fullLocation, onLocationUpdate]);
 
-  // Auto-set state filter from live location
+  // Auto-set state filter from live location (use state for filtering)
   useEffect(() => {
     if (state && !cityFilter) {
       setCityFilter(state);
     }
   }, [state, cityFilter, setCityFilter]);
 
+  // Show permission dialog if permission was denied
+  useEffect(() => {
+    if (permissionDenied) {
+      setShowLocationDialog(true);
+    }
+  }, [permissionDenied]);
+
   const handleGetLiveLocation = () => {
+    fetchLocation();
+  };
+
+  const handleEnableLocationFromDialog = () => {
+    setShowLocationDialog(false);
     fetchLocation();
   };
 
   return (
     <div className="space-y-5 p-4 pb-8">
+      {/* Location Permission Dialog */}
+      <LocationPermissionDialog
+        open={showLocationDialog}
+        onOpenChange={setShowLocationDialog}
+        onEnableLocation={handleEnableLocationFromDialog}
+        onSkip={() => setShowLocationDialog(false)}
+      />
+
       {/* Live Location Button */}
       <div className="space-y-3">
         <Button 
@@ -78,22 +104,36 @@ const DiscoverFilters = ({
           {locationLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Detecting location...
+              Detecting your town & state...
             </>
           ) : (
             <>
-              <MapPin className="w-4 h-4" />
-              {hasLocation ? "Update Live Location" : "Use Live Location"}
+              <Navigation className="w-4 h-4" />
+              {hasLocation ? "Update Live Location" : "Detect My Location"}
             </>
           )}
         </Button>
-        {locationError && (
+        
+        {locationError && !permissionDenied && (
           <p className="text-xs text-destructive text-center">{locationError}</p>
         )}
-        {hasLocation && state && (
-          <p className="text-xs text-emerald-500 text-center">
-            📍 Location detected: {state}
-          </p>
+        
+        {permissionDenied && (
+          <button 
+            onClick={() => setShowLocationDialog(true)}
+            className="w-full text-xs text-primary underline text-center"
+          >
+            Tap here to enable location access
+          </button>
+        )}
+        
+        {hasLocation && fullLocation && (
+          <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
+            <p className="text-xs text-center flex items-center justify-center gap-2">
+              <MapPin className="w-3 h-3 text-primary" />
+              <span className="text-primary font-medium">{fullLocation}</span>
+            </p>
+          </div>
         )}
       </div>
 

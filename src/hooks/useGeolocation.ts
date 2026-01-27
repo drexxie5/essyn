@@ -3,11 +3,13 @@ import { useState, useCallback, useEffect } from "react";
 interface GeolocationState {
   latitude: number | null;
   longitude: number | null;
-  city: string | null;
-  state: string | null;
+  city: string | null;  // Town/City/Village
+  state: string | null; // State
+  fullLocation: string | null; // Combined "City, State"
   loading: boolean;
   error: string | null;
   isNigeria: boolean;
+  permissionDenied: boolean;
 }
 
 interface UseGeolocationOptions {
@@ -22,9 +24,11 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
     longitude: null,
     city: null,
     state: null,
+    fullLocation: null,
     loading: false,
     error: null,
     isNigeria: false,
+    permissionDenied: false,
   });
 
   const fetchLocation = useCallback(async () => {
@@ -33,31 +37,48 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
       return;
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setState(prev => ({ ...prev, loading: true, error: null, permissionDenied: false }));
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         
         try {
-          // Reverse geocode to get city/state
+          // Reverse geocode to get city/town/state with more detail
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en&addressdetails=1&zoom=18`
           );
           const data = await response.json();
           
           const isNigeria = data.address?.country_code === "ng";
-          const city = data.address?.city || data.address?.town || data.address?.village || null;
+          
+          // Get the most specific location available
+          const city = data.address?.city || 
+                       data.address?.town || 
+                       data.address?.village ||
+                       data.address?.suburb ||
+                       data.address?.neighbourhood ||
+                       data.address?.locality ||
+                       data.address?.county ||
+                       null;
+          
           const stateValue = data.address?.state || null;
+          
+          // Create full location string
+          const fullLocation = city && stateValue 
+            ? `${city}, ${stateValue}` 
+            : city || stateValue || null;
           
           setState({
             latitude,
             longitude,
             city,
             state: stateValue,
+            fullLocation,
             loading: false,
             error: isNigeria ? null : "SinglezConnect is only available in Nigeria",
             isNigeria,
+            permissionDenied: false,
           });
         } catch (error) {
           console.error("Geocoding error:", error);
@@ -72,9 +93,12 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
       },
       (error) => {
         let errorMessage = "Failed to get your location";
+        let permissionDenied = false;
+        
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "Please enable location access to find singles near you";
+            errorMessage = "Location access denied";
+            permissionDenied = true;
             break;
           case error.POSITION_UNAVAILABLE:
             errorMessage = "Location information unavailable";
@@ -83,12 +107,17 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
             errorMessage = "Location request timed out";
             break;
         }
-        setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: errorMessage,
+          permissionDenied 
+        }));
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000, // Cache for 5 minutes
+        timeout: 15000,
+        maximumAge: 60000, // Cache for 1 minute
       }
     );
   }, []);

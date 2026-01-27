@@ -5,12 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Heart, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle, Camera, Loader2 } from "lucide-react";
+import { Heart, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle, Camera, Loader2, Navigation } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import StateSelector from "@/components/StateSelector";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import LocationPermissionDialog from "@/components/LocationPermissionDialog";
 
 const CLOUDINARY_CLOUD_NAME = "duyvf9jwl";
 const CLOUDINARY_UPLOAD_PRESET = "naughtyhooks_unsigned";
@@ -22,6 +23,7 @@ const Signup = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
   
   const [formData, setFormData] = useState({
     email: "",
@@ -42,9 +44,12 @@ const Signup = () => {
   const { 
     latitude: geoLat, 
     longitude: geoLng, 
+    city: geoCity,
     state: geoState, 
+    fullLocation,
     loading: geoLoading,
     error: geoError,
+    permissionDenied,
     fetchLocation,
     isNigeria 
   } = useGeolocation();
@@ -61,7 +66,10 @@ const Signup = () => {
     if (geoLat && geoLng) {
       setFormData(prev => ({ ...prev, latitude: geoLat, longitude: geoLng }));
     }
-    if (geoState) {
+    // Use full location (city + state) for display, or state as fallback
+    if (fullLocation) {
+      setFormData(prev => ({ ...prev, city: fullLocation }));
+    } else if (geoState) {
       setFormData(prev => ({ ...prev, city: geoState }));
     }
     if (geoError) {
@@ -71,7 +79,7 @@ const Signup = () => {
     } else {
       setLocationError(null);
     }
-  }, [geoLat, geoLng, geoState, geoError, isNigeria]);
+  }, [geoLat, geoLng, geoCity, geoState, fullLocation, geoError, isNigeria]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -272,14 +280,25 @@ const Signup = () => {
               <h1 className="text-xl font-display font-bold text-center">Your Profile</h1>
               <p className="text-muted-foreground text-center text-sm mb-4">Tell us about yourself</p>
 
+              {/* Location Permission Dialog */}
+              <LocationPermissionDialog
+                open={showLocationDialog}
+                onOpenChange={setShowLocationDialog}
+                onEnableLocation={() => {
+                  setShowLocationDialog(false);
+                  fetchLocation();
+                }}
+                onSkip={() => setShowLocationDialog(false)}
+              />
+
               {geoLoading && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30">
                   <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                  <p className="text-xs">Detecting your location...</p>
+                  <p className="text-xs">Detecting your town & state...</p>
                 </div>
               )}
 
-              {locationError && !geoLoading && (
+              {locationError && !geoLoading && !permissionDenied && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
                   <AlertTriangle className="w-4 h-4 text-destructive mt-0.5" />
                   <div>
@@ -291,10 +310,31 @@ const Signup = () => {
                 </div>
               )}
 
+              {permissionDenied && !geoLoading && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <Navigation className="w-4 h-4 text-amber-500 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-amber-500">Location access is needed to find singles near you</p>
+                    </div>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowLocationDialog(true)}
+                    className="w-full"
+                  >
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Enable Location
+                  </Button>
+                </div>
+              )}
+
               {formData.city && !geoLoading && (
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/30">
                   <MapPin className="w-3 h-3 text-primary" />
-                  <span className="text-xs">Location: <strong>{formData.city}, Nigeria</strong></span>
+                  <span className="text-xs">Location: <strong>{formData.city}</strong></span>
                 </div>
               )}
 
