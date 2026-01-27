@@ -303,24 +303,44 @@ const Admin = () => {
   };
 
   const deleteUser = async (userId: string) => {
-    // First delete related data
-    await Promise.all([
-      supabase.from("likes").delete().or(`liker_id.eq.${userId},liked_id.eq.${userId}`),
-      supabase.from("notifications").delete().eq("user_id", userId),
-      supabase.from("reports").delete().or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`),
-    ]);
+    try {
+      // First delete messages where user is in a chat
+      const { data: userChats } = await supabase
+        .from("chats")
+        .select("id")
+        .or(`user_one_id.eq.${userId},user_two_id.eq.${userId}`);
+      
+      if (userChats && userChats.length > 0) {
+        const chatIds = userChats.map(c => c.id);
+        await supabase.from("messages").delete().in("chat_id", chatIds);
+        await supabase.from("chats").delete().or(`user_one_id.eq.${userId},user_two_id.eq.${userId}`);
+      }
 
-    // Delete profile
-    const { error } = await supabase
-      .from("profiles")
-      .delete()
-      .eq("id", userId);
+      // Delete related data
+      await Promise.all([
+        supabase.from("likes").delete().or(`liker_id.eq.${userId},liked_id.eq.${userId}`),
+        supabase.from("matches").delete().or(`user_one_id.eq.${userId},user_two_id.eq.${userId}`),
+        supabase.from("notifications").delete().eq("user_id", userId),
+        supabase.from("reports").delete().or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`),
+        supabase.from("user_roles").delete().eq("user_id", userId),
+      ]);
 
-    if (error) {
+      // Finally delete profile
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+
+      if (error) {
+        console.error("Delete error:", error);
+        toast.error("Failed to delete user: " + error.message);
+      } else {
+        toast.success("User deleted successfully");
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
       toast.error("Failed to delete user");
-    } else {
-      toast.success("User deleted");
-      fetchAllData();
     }
   };
 
