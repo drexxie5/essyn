@@ -42,10 +42,9 @@ const Premium = () => {
 
   const features = [
     { icon: MessageCircle, text: "Unlimited messaging" },
-    { icon: Heart, text: "See who likes you" },
-    { icon: Eye, text: "View all profile visitors" },
     { icon: Zap, text: "Priority in discovery feed" },
     { icon: Crown, text: "Premium badge on profile" },
+    { icon: Heart, text: "Super likes - stand out more" },
   ];
 
   const handleSubscribe = async () => {

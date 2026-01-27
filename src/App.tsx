@@ -9,6 +9,7 @@ import Signup from "./pages/Signup";
 import Discover from "./pages/Discover";
 import Premium from "./pages/Premium";
 import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import Chats from "./pages/Chats";
 import Chat from "./pages/Chat";
 import Admin from "./pages/Admin";
@@ -16,6 +17,8 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Guidelines from "./pages/Guidelines";
 import Notifications from "./pages/Notifications";
+import Settings from "./pages/Settings";
+import PrivacySafety from "./pages/PrivacySafety";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,10 +36,13 @@ const App = () => (
           <Route path="/discover" element={<Discover />} />
           <Route path="/premium" element={<Premium />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:chatId" element={<Chat />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/privacy-safety" element={<PrivacySafety />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/guidelines" element={<Guidelines />} />

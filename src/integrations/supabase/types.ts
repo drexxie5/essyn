@@ -174,6 +174,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           profile_image_url: string | null
+          profile_images: string[] | null
           subscription_expires: string | null
           subscription_plan:
             | Database["public"]["Enums"]["subscription_plan_type"]
@@ -197,6 +198,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           profile_image_url?: string | null
+          profile_images?: string[] | null
           subscription_expires?: string | null
           subscription_plan?:
             | Database["public"]["Enums"]["subscription_plan_type"]
@@ -220,6 +222,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           profile_image_url?: string | null
+          profile_images?: string[] | null
           subscription_expires?: string | null
           subscription_plan?:
             | Database["public"]["Enums"]["subscription_plan_type"]
