@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { 
-  Heart, MapPin, MessageCircle, Crown, Filter, Lock, ChevronLeft, ChevronRight, Search, User
+  Heart, Filter, Crown, ChevronLeft, ChevronRight, Sparkles, Users
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +15,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import AppLayout from "@/components/AppLayout";
+import ProfileCard from "@/components/discover/ProfileCard";
+import RecommendedUsers from "@/components/discover/RecommendedUsers";
+import DiscoverFilters from "@/components/discover/DiscoverFilters";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -29,17 +29,41 @@ const Discover = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
+  const [showRecommended, setShowRecommended] = useState(false);
   
   // Filters
   const [ageRange, setAgeRange] = useState([18, 50]);
   const [distanceKm, setDistanceKm] = useState(100);
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Realtime subscription for new profiles
+  useEffect(() => {
+    const channel = supabase
+      .channel('discover-profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        () => {
+          if (currentUserProfile) {
+            fetchProfiles(currentUserProfile);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserProfile]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -75,7 +99,6 @@ const Discover = () => {
   const fetchProfiles = async (userProfile: Profile) => {
     setLoading(true);
     try {
-      // Use user's interested_in preference for filtering
       const preferredGender = userProfile.interested_in;
       
       let query = supabase
@@ -88,12 +111,10 @@ const Discover = () => {
         .order("last_active", { ascending: false })
         .limit(50);
 
-      // Filter by user's preference (interested_in) unless they selected "other" (everyone)
       if (preferredGender && preferredGender !== "other") {
         query = query.eq("gender", preferredGender);
       }
       
-      // Additional manual filter if user selects in the filter panel
       if (genderFilter !== "all" && ["male", "female", "non_binary", "other"].includes(genderFilter)) {
         query = query.eq("gender", genderFilter as "male" | "female" | "non_binary" | "other");
       }
@@ -106,7 +127,6 @@ const Discover = () => {
 
       if (error) throw error;
       
-      // Filter by distance if user has location
       let filteredProfiles = data || [];
       if (userProfile.latitude && userProfile.longitude) {
         filteredProfiles = filteredProfiles.filter(p => {
@@ -134,7 +154,6 @@ const Discover = () => {
     if (!session) return;
 
     if (likedProfiles.has(profile.id)) {
-      // Unlike
       await supabase
         .from("likes")
         .delete()
@@ -148,7 +167,6 @@ const Discover = () => {
       });
       toast.success("Removed like");
     } else {
-      // Like
       const { error } = await supabase
         .from("likes")
         .insert({
@@ -160,7 +178,6 @@ const Discover = () => {
         setLikedProfiles(prev => new Set(prev).add(profile.id));
         toast.success(`You liked ${profile.username}!`);
         
-        // Create notification for the liked user
         await supabase.from("notifications").insert({
           user_id: profile.id,
           type: "like",
@@ -232,86 +249,39 @@ const Discover = () => {
     scrollContainerRef.current?.scrollBy({ left: 300, behavior: "smooth" });
   };
 
-  const FiltersContent = () => (
-    <div className="space-y-6 p-4">
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Age Range: {ageRange[0]} - {ageRange[1]}</label>
-        <Slider
-          value={ageRange}
-          onValueChange={setAgeRange}
-          min={18}
-          max={70}
-          step={1}
-        />
-      </div>
-
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Distance: {distanceKm} km</label>
-        <Slider
-          value={[distanceKm]}
-          onValueChange={([val]) => setDistanceKm(val)}
-          min={5}
-          max={500}
-          step={5}
-        />
-      </div>
-
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Location / City</label>
-        <Input
-          placeholder="e.g. Lagos, Abuja, Onitsha"
-          value={cityFilter}
-          onChange={(e) => setCityFilter(e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Show me</label>
-        <Select value={genderFilter} onValueChange={setGenderFilter}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Everyone</SelectItem>
-            <SelectItem value="male">Men</SelectItem>
-            <SelectItem value="female">Women</SelectItem>
-            <SelectItem value="non_binary">Non-binary</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <Button
-        className="w-full"
-        onClick={() => currentUserProfile && fetchProfiles(currentUserProfile)}
-      >
-        Apply Filters
-      </Button>
-    </div>
-  );
-
-  // Filter profiles by search term
-  const filteredProfiles = profiles.filter(
-    (p) => p.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Show recommended users view
+  if (showRecommended && currentUserProfile) {
+    return (
+      <RecommendedUsers
+        currentUserProfile={currentUserProfile}
+        likedProfiles={likedProfiles}
+        onBack={() => setShowRecommended(false)}
+        onLike={handleLike}
+        onMessage={handleMessage}
+        calculateDistance={calculateDistance}
+      />
+    );
+  }
 
   return (
     <AppLayout title="Discover">
       <div className="max-w-4xl mx-auto px-4 py-4">
-        {/* Search Bar */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        {/* Recommendations Button - Replaces Search Bar */}
+        <motion.button
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => setShowRecommended(true)}
+          className="w-full mb-4 p-4 rounded-2xl bg-gradient-sensual text-primary-foreground flex items-center justify-center gap-3 shadow-glow hover:shadow-lg transition-all"
+        >
+          <Sparkles className="w-5 h-5" />
+          <span className="font-display font-semibold">View Recommended Singles</span>
+          <Users className="w-5 h-5" />
+        </motion.button>
 
         {/* Header with filters */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {filteredProfiles.length} people nearby
+            {profiles.length} people nearby
           </p>
           <Sheet>
             <SheetTrigger asChild>
@@ -324,7 +294,17 @@ const Discover = () => {
               <SheetHeader>
                 <SheetTitle>Filter Matches</SheetTitle>
               </SheetHeader>
-              <FiltersContent />
+              <DiscoverFilters
+                ageRange={ageRange}
+                setAgeRange={setAgeRange}
+                distanceKm={distanceKm}
+                setDistanceKm={setDistanceKm}
+                cityFilter={cityFilter}
+                setCityFilter={setCityFilter}
+                genderFilter={genderFilter}
+                setGenderFilter={setGenderFilter}
+                onApply={() => currentUserProfile && fetchProfiles(currentUserProfile)}
+              />
             </SheetContent>
           </Sheet>
         </div>
@@ -337,13 +317,17 @@ const Discover = () => {
               <p className="text-muted-foreground">Finding matches near you...</p>
             </div>
           </div>
-        ) : filteredProfiles.length === 0 ? (
+        ) : profiles.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] text-center">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
               <Heart className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h2 className="text-xl font-display font-bold mb-2">No profiles found</h2>
-            <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters or search</p>
+            <h2 className="text-xl font-display font-bold mb-2">No profiles found nearby</h2>
+            <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters or check recommended singles</p>
+            <Button onClick={() => setShowRecommended(true)} variant="hero">
+              <Sparkles className="w-4 h-4 mr-2" />
+              View Recommended
+            </Button>
           </div>
         ) : (
           <div className="relative">
@@ -361,121 +345,29 @@ const Discover = () => {
               <ChevronRight className="w-5 h-5" />
             </button>
 
-            {/* Profiles Grid */}
+            {/* Profiles Scroll */}
             <div
               ref={scrollContainerRef}
               className="flex gap-4 overflow-x-auto pb-4 px-8 snap-x snap-mandatory scrollbar-hide"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              {filteredProfiles.map((profile, index) => (
-                <motion.div
+              {profiles.map((profile, index) => (
+                <ProfileCard
                   key={profile.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                  className="flex-shrink-0 w-[280px] snap-center"
-                >
-                  <div className="relative rounded-2xl overflow-hidden glass border border-border">
-                    {/* Profile Image - Clickable to view profile */}
-                    <div 
-                      className="aspect-[3/4] relative bg-muted cursor-pointer"
-                      onClick={() => navigate(`/user/${profile.id}`)}
-                    >
-                      <img
-                        src={profile.profile_image_url || "/placeholder.svg"}
-                        alt={profile.username}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/placeholder.svg";
-                        }}
-                      />
-                      
-                      {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-
-                      {/* Premium badge */}
-                      {profile.is_premium && (
-                        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-gold text-secondary-foreground text-xs font-medium">
-                          <Crown className="w-3 h-3" />
-                          Premium
-                        </div>
-                      )}
-
-                      {/* View Profile Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/user/${profile.id}`);
-                        }}
-                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center hover:bg-background transition-colors"
-                      >
-                        <User className="w-4 h-4" />
-                      </button>
-
-                      {/* Profile info */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h2 className="text-xl font-display font-bold text-foreground">
-                          {profile.username}, {profile.age}
-                        </h2>
-                        <div className="flex items-center gap-1 text-muted-foreground text-sm mt-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>{profile.city || "Nigeria"}</span>
-                          {currentUserProfile?.latitude && profile.latitude && (
-                            <span className="ml-1">
-                              • {calculateDistance(
-                                currentUserProfile.latitude,
-                                currentUserProfile.longitude!,
-                                profile.latitude,
-                                profile.longitude!
-                              )} km
-                            </span>
-                          )}
-                        </div>
-                        {profile.bio && (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
-                            {profile.bio}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center justify-center gap-2 p-3 bg-card">
-                      <Button
-                        size="sm"
-                        variant={likedProfiles.has(profile.id) ? "default" : "outline"}
-                        className={`flex-1 ${likedProfiles.has(profile.id) ? "bg-primary" : ""}`}
-                        onClick={() => handleLike(profile)}
-                      >
-                        <Heart className={`w-4 h-4 mr-1 ${likedProfiles.has(profile.id) ? "fill-current" : ""}`} />
-                        {likedProfiles.has(profile.id) ? "Liked" : "Like"}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => handleMessage(profile)}
-                      >
-                        {currentUserProfile?.is_premium ? (
-                          <>
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            Chat
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="w-4 h-4 mr-1" />
-                            Chat
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
+                  profile={profile}
+                  index={index}
+                  isLiked={likedProfiles.has(profile.id)}
+                  isPremium={currentUserProfile?.is_premium || false}
+                  currentUserLat={currentUserProfile?.latitude}
+                  currentUserLng={currentUserProfile?.longitude}
+                  onLike={handleLike}
+                  onMessage={handleMessage}
+                  calculateDistance={calculateDistance}
+                  variant="scroll"
+                />
               ))}
             </div>
 
-            {/* Profile count */}
             <p className="text-center text-muted-foreground text-sm mt-2">
               Scroll to see more profiles
             </p>
