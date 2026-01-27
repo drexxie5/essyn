@@ -187,13 +187,16 @@ export type Database = {
           created_at: string | null
           email: string
           gender: Database["public"]["Enums"]["gender_type"]
+          hobbies: string[] | null
           id: string
           interested_in: Database["public"]["Enums"]["gender_type"]
+          interests: string[] | null
           is_banned: boolean | null
           is_premium: boolean | null
           last_active: string | null
           latitude: number | null
           longitude: number | null
+          looking_for: string | null
           profile_image_url: string | null
           profile_images: string[] | null
           subscription_expires: string | null
@@ -211,13 +214,16 @@ export type Database = {
           created_at?: string | null
           email: string
           gender: Database["public"]["Enums"]["gender_type"]
+          hobbies?: string[] | null
           id: string
           interested_in: Database["public"]["Enums"]["gender_type"]
+          interests?: string[] | null
           is_banned?: boolean | null
           is_premium?: boolean | null
           last_active?: string | null
           latitude?: number | null
           longitude?: number | null
+          looking_for?: string | null
           profile_image_url?: string | null
           profile_images?: string[] | null
           subscription_expires?: string | null
@@ -235,13 +241,16 @@ export type Database = {
           created_at?: string | null
           email?: string
           gender?: Database["public"]["Enums"]["gender_type"]
+          hobbies?: string[] | null
           id?: string
           interested_in?: Database["public"]["Enums"]["gender_type"]
+          interests?: string[] | null
           is_banned?: boolean | null
           is_premium?: boolean | null
           last_active?: string | null
           latitude?: number | null
           longitude?: number | null
+          looking_for?: string | null
           profile_image_url?: string | null
           profile_images?: string[] | null
           subscription_expires?: string | null

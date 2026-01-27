@@ -71,8 +71,8 @@ export const AppLayout = ({
               <div className="w-8 h-8 rounded-lg bg-gradient-sensual flex items-center justify-center">
                 <Heart className="w-4 h-4 text-white" fill="white" />
               </div>
-              <span className="text-lg font-display font-bold">
-                {title || "SinglezConnect"}
+              <span className="text-lg font-display font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                SinglezConnect
               </span>
             </Link>
           </div>
