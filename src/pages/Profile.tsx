@@ -93,6 +93,7 @@ const Profile = () => {
     city: "",
     age: 18,
     gender: "male" as "male" | "female" | "non_binary" | "other",
+    interested_in: "female" as "male" | "female" | "non_binary" | "other",
     hobbies: [] as string[],
     interests: [] as string[],
     looking_for: "",
@@ -127,6 +128,7 @@ const Profile = () => {
           city: profileData.city || "",
           age: profileData.age || 18,
           gender: profileData.gender || "male",
+          interested_in: profileData.interested_in || "female",
           hobbies: profileData.hobbies || [],
           interests: profileData.interests || [],
           looking_for: profileData.looking_for || "",
@@ -163,6 +165,7 @@ const Profile = () => {
           city: formData.city,
           age: formData.age,
           gender: formData.gender,
+          interested_in: formData.interested_in,
           hobbies: formData.hobbies,
           interests: formData.interests,
           looking_for: formData.looking_for,
@@ -366,7 +369,38 @@ const Profile = () => {
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm capitalize">{profile?.gender}</p>
+              <p className="text-sm capitalize">{profile?.gender}</p>
+              )}
+            </div>
+
+            {/* Interested In */}
+            <div>
+              <Label className="text-muted-foreground text-xs flex items-center gap-1">
+                <Heart className="w-3 h-3" /> Interested In
+              </Label>
+              {editing ? (
+                <Select
+                  value={formData.interested_in}
+                  onValueChange={(value: "male" | "female" | "non_binary" | "other") => 
+                    setFormData({ ...formData, interested_in: value })
+                  }
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Men</SelectItem>
+                    <SelectItem value="female">Women</SelectItem>
+                    <SelectItem value="non_binary">Non-binary</SelectItem>
+                    <SelectItem value="other">Everyone</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm capitalize">
+                  {profile?.interested_in === "male" ? "Men" : 
+                   profile?.interested_in === "female" ? "Women" : 
+                   profile?.interested_in === "non_binary" ? "Non-binary" : "Everyone"}
+                </p>
               )}
             </div>
 
