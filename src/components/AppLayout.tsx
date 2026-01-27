@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, memo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "./BottomNav";
@@ -12,7 +12,7 @@ interface AppLayoutProps {
   title?: string;
 }
 
-export const AppLayout = ({ 
+export const AppLayout = memo(({ 
   children, 
   showNav = true, 
   showHeader = true,
@@ -59,7 +59,7 @@ export const AppLayout = ({
     }
   }, [loading, user, isPublicPath, navigate]);
 
-  const ensurePremiumNotExpired = async (userId: string) => {
+  const ensurePremiumNotExpired = useCallback(async (userId: string) => {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("is_premium, subscription_expires")
@@ -82,7 +82,7 @@ export const AppLayout = ({
         })
         .eq("id", userId);
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -122,6 +122,8 @@ export const AppLayout = ({
       {showNav && user && <BottomNav />}
     </div>
   );
-};
+});
+
+AppLayout.displayName = "AppLayout";
 
 export default AppLayout;
