@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin, Shield, MessageCircle, Crown, Sparkles, Users, Star, Check, Zap } from "lucide-react";
+import { Heart, MapPin, Shield, MessageCircle, Crown, Users, Star, Check, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,17 +23,17 @@ const Index = () => {
     {
       icon: MapPin,
       title: "Find Love Nearby",
-      description: "Discover singles in your city. Real people, real connections, right where you are.",
+      description: "Discover singles in your city. Real people, real connections.",
     },
     {
       icon: Shield,
       title: "Safe & Private",
-      description: "Your identity stays protected. Connect confidently with verified adults only.",
+      description: "Your identity stays protected. Connect with verified adults only.",
     },
     {
       icon: MessageCircle,
       title: "Chat Instantly",
-      description: "No waiting games. Match and start meaningful conversations right away.",
+      description: "Match and start meaningful conversations right away.",
     },
   ];
 
@@ -41,13 +41,13 @@ const Index = () => {
     {
       name: "Chioma A.",
       location: "Lagos",
-      text: "I was tired of empty promises. SinglezConnect brought me someone real. We're planning our future together! 💕",
+      text: "I was tired of empty promises. SinglezConnect brought me someone real. We are planning our future together!",
       rating: 5,
     },
     {
       name: "Emeka J.",
       location: "Abuja",
-      text: "Met my queen here! The location feature is perfect—she was right in my area. Best decision ever.",
+      text: "Met my queen here! The location feature is perfect. She was right in my area. Best decision ever.",
       rating: 5,
     },
     {
@@ -66,49 +66,40 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative min-h-[100dvh] flex flex-col">
-        {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-dark">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/15 rounded-full blur-[100px]" />
-          <div className="absolute bottom-32 right-10 w-60 h-60 bg-accent/15 rounded-full blur-[100px]" />
+          <div className="absolute top-20 left-4 w-48 h-48 bg-primary/20 rounded-full blur-[80px]" />
+          <div className="absolute bottom-32 right-4 w-40 h-40 bg-accent/20 rounded-full blur-[80px]" />
         </div>
 
         {/* Navigation */}
-        <nav className="relative z-50 py-4 px-4">
-          <div className="max-w-lg mx-auto flex items-center justify-between">
+        <nav className="relative z-50 py-3 px-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-sensual flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" fill="white" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-sensual flex items-center justify-center">
+                <Heart className="w-4 h-4 text-white" fill="white" />
               </div>
-              <span className="text-xl font-display font-bold">SinglezConnect</span>
+              <span className="text-lg font-display font-bold">SinglezConnect</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Link to="/login">
-                <Button variant="ghost" size="sm">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/premium">
-                <Button variant="gold" size="sm" className="hidden sm:flex">
-                  <Crown className="w-3.5 h-3.5 mr-1" />
-                  Premium
-                </Button>
-              </Link>
-            </div>
+            <Link to="/login">
+              <Button variant="ghost" size="sm" className="h-9">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </nav>
 
         {/* Hero Content */}
-        <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
-          <div className="text-center max-w-lg mx-auto">
+        <div className="relative z-10 flex-1 flex items-center px-4 py-6">
+          <div className="w-full max-w-md mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5 }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 backdrop-blur mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 mb-5">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -116,32 +107,31 @@ const Index = () => {
                 <span className="text-xs text-muted-foreground">1,000+ singles online now</span>
               </div>
               
-              <h1 className="text-4xl sm:text-5xl font-display font-bold mb-4 leading-[1.1]">
+              <h1 className="text-3xl font-display font-bold mb-3 leading-tight">
                 Stop Searching.{" "}
                 <span className="text-gradient">Start Connecting.</span>
               </h1>
               
-              <p className="text-base text-muted-foreground mb-6 leading-relaxed max-w-md mx-auto">
-                Your person is waiting. Join thousands of Nigerians finding love, companionship, and 
-                real connections every day. No games, no fakes—just genuine singles ready to meet you. 💫
+              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                Your person is waiting. Join thousands of Nigerians finding love and real connections every day. No games, no fakes.
               </p>
 
               <div className="flex flex-col gap-3">
                 <Link to="/signup" className="w-full">
-                  <Button size="lg" className="w-full h-14 text-base">
-                    <Heart className="w-5 h-5 mr-2" fill="currentColor" />
-                    Find Your Match Now
+                  <Button size="lg" className="w-full h-12 text-base">
+                    <Heart className="w-4 h-4 mr-2" fill="currentColor" />
+                    Find Your Match
                   </Button>
                 </Link>
                 <Link to="/signup" className="w-full">
-                  <Button variant="outline" size="lg" className="w-full">
+                  <Button variant="outline" size="lg" className="w-full h-11">
                     <MapPin className="w-4 h-4 mr-2" />
                     Browse Singles Near Me
                   </Button>
                 </Link>
               </div>
 
-              <div className="flex items-center justify-center gap-4 mt-6 text-xs text-muted-foreground">
+              <div className="flex items-center justify-center gap-3 mt-5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Check className="w-3 h-3 text-green-500" />
                   Free to join
@@ -152,7 +142,7 @@ const Index = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <Check className="w-3 h-3 text-green-500" />
-                  100% private
+                  Private
                 </span>
               </div>
             </motion.div>
@@ -160,58 +150,31 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      <section className="py-12 px-4 border-y border-border bg-card/50">
-        <div className="max-w-lg mx-auto">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-            >
-              <p className="text-2xl sm:text-3xl font-display font-bold text-gradient">50K+</p>
-              <p className="text-xs text-muted-foreground mt-1">Active Singles</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-            >
-              <p className="text-2xl sm:text-3xl font-display font-bold text-gradient-gold">2K+</p>
-              <p className="text-xs text-muted-foreground mt-1">Matches Daily</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-            >
-              <p className="text-2xl sm:text-3xl font-display font-bold text-gradient">36</p>
-              <p className="text-xs text-muted-foreground mt-1">States Covered</p>
-            </motion.div>
+      {/* Social Proof */}
+      <section className="py-8 px-4 border-y border-border bg-card/50">
+        <div className="grid grid-cols-3 gap-3 text-center max-w-md mx-auto">
+          <div>
+            <p className="text-xl font-display font-bold text-gradient">50K+</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Active Singles</p>
+          </div>
+          <div>
+            <p className="text-xl font-display font-bold text-gradient-gold">2K+</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Matches Daily</p>
+          </div>
+          <div>
+            <p className="text-xl font-display font-bold text-gradient">36</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">States Covered</p>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-10"
-          >
-            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-3">
-              Why Singles Choose Us
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Built for Nigerians who are done with the dating games
-            </p>
-          </motion.div>
-
-          <div className="space-y-4">
+      {/* Features */}
+      <section className="py-10 px-4">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-xl font-display font-bold mb-6 text-center">
+            Why Singles Choose Us
+          </h2>
+          <div className="space-y-3">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -219,14 +182,14 @@ const Index = () => {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="glass rounded-xl p-4 flex items-start gap-4"
+                className="glass rounded-xl p-4 flex items-start gap-3"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-sensual flex-shrink-0 flex items-center justify-center">
-                  <feature.icon className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-gradient-sensual flex-shrink-0 flex items-center justify-center">
+                  <feature.icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-display font-semibold mb-1">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                  <h3 className="font-semibold text-sm mb-0.5">{feature.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -234,69 +197,53 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Flirty Copy Section */}
-      <section className="py-16 px-4 bg-card/50">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-4">
-              Tired of Being <span className="text-gradient">Single</span>?
-            </h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Your DMs are dry. Your ex moved on. Your friends are getting married. 
-              And you're still swiping through fakes and catfish? 😩
-            </p>
-          </motion.div>
+      {/* Flirty CTA */}
+      <section className="py-10 px-4 bg-card/50">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-xl font-display font-bold mb-3 text-center">
+            Tired of Being <span className="text-gradient">Single</span>?
+          </h2>
+          <p className="text-sm text-muted-foreground text-center mb-5">
+            Your DMs are dry. Your friends are getting married. And you are still swiping through fakes?
+          </p>
 
-          <div className="glass rounded-2xl p-6 space-y-4">
-            <p className="text-center leading-relaxed">
-              <span className="text-2xl">🔥</span> <strong>Na your time now!</strong>
+          <div className="glass rounded-xl p-5">
+            <p className="text-center mb-3">
+              <span className="text-xl">🔥</span> <strong>Na your time now!</strong>
             </p>
-            <p className="text-sm text-muted-foreground text-center leading-relaxed">
-              SinglezConnect is different. Every profile is real. Every person is verified. 
-              Our smart matching connects you with singles who are <em>actually ready</em> for 
-              something real—not just another "hey" that goes nowhere.
+            <p className="text-xs text-muted-foreground text-center leading-relaxed mb-4">
+              SinglezConnect is different. Every profile is real. Our smart matching connects you with singles who are actually ready for something real.
             </p>
-            <div className="flex flex-wrap justify-center gap-2 pt-2">
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Lagos</span>
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Abuja</span>
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">PH</span>
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Ibadan</span>
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Kano</span>
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">+31 more</span>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {["Lagos", "Abuja", "PH", "Ibadan", "Kano", "+31 more"].map((city) => (
+                <span key={city} className="px-2.5 py-1 rounded-full bg-primary/20 text-primary text-[10px]">
+                  {city}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Premium Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="glass rounded-2xl p-6 border-secondary/30"
-          >
+      {/* Premium */}
+      <section className="py-10 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="glass rounded-xl p-5 border-secondary/30">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center">
-                <Crown className="w-6 h-6 text-secondary-foreground" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-gold flex items-center justify-center">
+                <Crown className="w-5 h-5 text-secondary-foreground" />
               </div>
               <div>
-                <h3 className="font-display font-bold text-lg">Go Premium</h3>
+                <h3 className="font-display font-bold">Go Premium</h3>
                 <p className="text-xs text-muted-foreground">Unlock all features</p>
               </div>
             </div>
 
-            <ul className="space-y-3 mb-6">
+            <ul className="space-y-2.5 mb-5">
               {premiumFeatures.map((feature, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm">
-                  <div className="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-secondary" />
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <div className="w-4 h-4 rounded-full bg-secondary/20 flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-secondary" />
                   </div>
                   {feature}
                 </li>
@@ -304,55 +251,44 @@ const Index = () => {
             </ul>
 
             <Link to="/signup">
-              <Button variant="gold" className="w-full">
+              <Button variant="gold" className="w-full h-11">
                 <Zap className="w-4 h-4 mr-2" />
                 Start Free, Upgrade Anytime
               </Button>
             </Link>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 px-4 bg-card/50">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-2">
-              Real Love Stories 💕
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              From our Nigerian singles community
-            </p>
-          </motion.div>
-
-          <div className="space-y-4">
+      <section className="py-10 px-4 bg-card/50">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-xl font-display font-bold mb-5 text-center">
+            Real Love Stories
+          </h2>
+          <div className="space-y-3">
             {testimonials.map((testimonial, index) => (
               <motion.div
                 key={testimonial.name}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 viewport={{ once: true }}
                 className="glass rounded-xl p-4"
               >
-                <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center gap-0.5 mb-2">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-secondary text-secondary" />
+                    <Star key={i} className="w-3 h-3 fill-secondary text-secondary" />
                   ))}
                 </div>
                 <p className="text-sm mb-3 leading-relaxed">"{testimonial.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-sensual flex items-center justify-center text-sm font-bold text-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-sensual flex items-center justify-center text-xs font-bold text-white">
                     {testimonial.name[0]}
                   </div>
                   <div>
                     <p className="font-medium text-sm">{testimonial.name}</p>
-                    <p className="text-xs text-muted-foreground">{testimonial.location}</p>
+                    <p className="text-[10px] text-muted-foreground">{testimonial.location}</p>
                   </div>
                 </div>
               </motion.div>
@@ -362,51 +298,45 @@ const Index = () => {
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 px-4">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="glass rounded-2xl p-8 text-center"
-          >
-            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-4">
+      <section className="py-10 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="glass rounded-xl p-6 text-center">
+            <h2 className="text-xl font-display font-bold mb-3">
               Your <span className="text-gradient">Person</span> Is Waiting
             </h2>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
-              Don't spend another night scrolling alone. Join SinglezConnect today 
-              and start your love story. It's free to sign up! 🥰
+            <p className="text-sm text-muted-foreground mb-5">
+              Join SinglezConnect today and start your love story. Free to sign up!
             </p>
             <Link to="/signup">
-              <Button size="lg" className="w-full h-14 text-base">
-                <Heart className="w-5 h-5 mr-2" fill="currentColor" />
+              <Button size="lg" className="w-full h-12">
+                <Heart className="w-4 h-4 mr-2" fill="currentColor" />
                 Create Free Account
               </Button>
             </Link>
-            <p className="text-xs text-muted-foreground mt-4">
-              🇳🇬 Nigeria Only • 18+ • No credit card needed
+            <p className="text-[10px] text-muted-foreground mt-3">
+              Nigeria Only • 18+ • No credit card needed
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-border">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-gradient-sensual flex items-center justify-center">
-              <Heart className="w-4 h-4 text-white" fill="white" />
+      <footer className="py-6 px-4 border-t border-border">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-gradient-sensual flex items-center justify-center">
+              <Heart className="w-3.5 h-3.5 text-white" fill="white" />
             </div>
-            <span className="font-display font-bold">SinglezConnect</span>
+            <span className="font-display font-bold text-sm">SinglezConnect</span>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground mb-6">
+          <div className="flex justify-center gap-4 text-xs text-muted-foreground mb-4">
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link to="/guidelines" className="hover:text-foreground transition-colors">Guidelines</Link>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-center text-[10px] text-muted-foreground">
             © {new Date().getFullYear()} SinglezConnect. Adults 18+ only.
           </p>
         </div>

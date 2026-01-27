@@ -109,7 +109,6 @@ export const ImageUpload = ({
         accept="image/*"
         onChange={handleFileChange}
         className="hidden"
-        capture="environment"
       />
       
       <div 

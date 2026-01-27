@@ -18,6 +18,7 @@ import AppLayout from "@/components/AppLayout";
 import ProfileCard from "@/components/discover/ProfileCard";
 import RecommendedUsers from "@/components/discover/RecommendedUsers";
 import DiscoverFilters from "@/components/discover/DiscoverFilters";
+import MatchCelebration from "@/components/MatchCelebration";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -30,12 +31,15 @@ const Discover = () => {
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [showRecommended, setShowRecommended] = useState(false);
+  const [showMatchCelebration, setShowMatchCelebration] = useState(false);
+  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   
-  // Filters
+  // Filters - now distance is optional, not applied by default
   const [ageRange, setAgeRange] = useState([18, 50]);
-  const [distanceKm, setDistanceKm] = useState(100);
+  const [distanceKm, setDistanceKm] = useState(500);
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("");
+  const [useDistanceFilter, setUseDistanceFilter] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -108,8 +112,7 @@ const Discover = () => {
         .eq("is_banned", false)
         .gte("age", ageRange[0])
         .lte("age", ageRange[1])
-        .order("last_active", { ascending: false })
-        .limit(50);
+        .order("last_active", { ascending: false });
 
       if (preferredGender && preferredGender !== "other") {
         query = query.eq("gender", preferredGender);
@@ -128,7 +131,9 @@ const Discover = () => {
       if (error) throw error;
       
       let filteredProfiles = data || [];
-      if (userProfile.latitude && userProfile.longitude) {
+      
+      // Only apply distance filter if user explicitly enabled it
+      if (useDistanceFilter && userProfile.latitude && userProfile.longitude) {
         filteredProfiles = filteredProfiles.filter(p => {
           if (!p.latitude || !p.longitude) return true;
           const distance = calculateDistance(
@@ -178,15 +183,63 @@ const Discover = () => {
         setLikedProfiles(prev => new Set(prev).add(profile.id));
         toast.success(`You liked ${profile.username}!`);
         
-        await supabase.from("notifications").insert({
-          user_id: profile.id,
-          type: "like",
-          title: `${currentUserProfile?.username} liked you!`,
-          message: "Check out their profile",
-          related_user_id: session.user.id,
-        });
+        // Check if they already liked us (mutual like = match!)
+        const { data: mutualLike } = await supabase
+          .from("likes")
+          .select("id")
+          .eq("liker_id", profile.id)
+          .eq("liked_id", session.user.id)
+          .maybeSingle();
+        
+        if (mutualLike) {
+          // Create a match!
+          const { error: matchError } = await supabase
+            .from("matches")
+            .insert({
+              user_one_id: session.user.id,
+              user_two_id: profile.id,
+            });
+          
+          if (!matchError) {
+            setMatchedProfile(profile);
+            setShowMatchCelebration(true);
+            
+            // Notify both users
+            await supabase.from("notifications").insert([
+              {
+                user_id: profile.id,
+                type: "match",
+                title: `You matched with ${currentUserProfile?.username}!`,
+                message: "Start chatting now!",
+                related_user_id: session.user.id,
+              },
+              {
+                user_id: session.user.id,
+                type: "match",
+                title: `You matched with ${profile.username}!`,
+                message: "Start chatting now!",
+                related_user_id: profile.id,
+              }
+            ]);
+          }
+        } else {
+          // Just a regular like notification
+          await supabase.from("notifications").insert({
+            user_id: profile.id,
+            type: "like",
+            title: `${currentUserProfile?.username} likes you!`,
+            message: "Like them back to match!",
+            related_user_id: session.user.id,
+          });
+        }
       }
     }
+  };
+
+  const handleStartChatFromMatch = async () => {
+    if (!matchedProfile) return;
+    setShowMatchCelebration(false);
+    await handleMessage(matchedProfile);
   };
 
   const handleMessage = async (profile: Profile) => {
@@ -281,18 +334,18 @@ const Discover = () => {
         {/* Header with filters */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {profiles.length} people nearby
+            {profiles.length} singles {useDistanceFilter ? "nearby" : "available"}
           </p>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="h-9">
                 <Filter className="w-4 h-4 mr-2" />
                 Filters
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-auto rounded-t-3xl">
+            <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
               <SheetHeader>
-                <SheetTitle>Filter Matches</SheetTitle>
+                <SheetTitle>Filter Singles</SheetTitle>
               </SheetHeader>
               <DiscoverFilters
                 ageRange={ageRange}
@@ -303,6 +356,8 @@ const Discover = () => {
                 setCityFilter={setCityFilter}
                 genderFilter={genderFilter}
                 setGenderFilter={setGenderFilter}
+                useDistanceFilter={useDistanceFilter}
+                setUseDistanceFilter={setUseDistanceFilter}
                 onApply={() => currentUserProfile && fetchProfiles(currentUserProfile)}
               />
             </SheetContent>
@@ -397,6 +452,15 @@ const Discover = () => {
             </button>
           </motion.div>
         )}
+
+        {/* Match Celebration Modal */}
+        <MatchCelebration
+          isOpen={showMatchCelebration}
+          matchedProfile={matchedProfile}
+          currentUserImage={currentUserProfile?.profile_image_url}
+          onClose={() => setShowMatchCelebration(false)}
+          onStartChat={handleStartChatFromMatch}
+        />
       </div>
     </AppLayout>
   );
