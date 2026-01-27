@@ -117,7 +117,7 @@ const Chats = () => {
           <div className="w-20 h-20 rounded-full bg-gradient-gold flex items-center justify-center mb-6">
             <Crown className="w-10 h-10 text-secondary-foreground" />
           </div>
-          <h2 className="text-2xl font-display font-bold mb-2">
+          <h2 className="text-xl font-display font-bold mb-2">
             Unlock Messaging
           </h2>
           <p className="text-muted-foreground mb-6 max-w-xs">

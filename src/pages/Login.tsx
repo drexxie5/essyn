@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Flame, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Heart, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,8 +46,8 @@ const Login = () => {
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <Flame className="w-8 h-8 text-primary" />
-          <span className="text-2xl font-display font-bold text-gradient">NaughtyHooks</span>
+          <Heart className="w-8 h-8 text-primary" fill="currentColor" />
+          <span className="text-2xl font-display font-bold">SinglezConnect</span>
         </div>
 
         <h1 className="text-2xl font-display font-bold text-center mb-2">Welcome Back</h1>
