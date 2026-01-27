@@ -1,4 +1,5 @@
 import { Heart, MapPin, MessageCircle, Crown, Lock, User } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -83,9 +84,12 @@ const ProfileCard = ({
 
           {/* Profile info */}
           <div className="absolute bottom-0 left-0 right-0 p-4">
-            <h2 className="text-xl font-display font-bold text-foreground">
-              {profile.username}, {profile.age}
-            </h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-xl font-display font-bold text-foreground">
+                {profile.username}, {profile.age}
+              </h2>
+              {profile.is_verified && <VerifiedBadge size="md" />}
+            </div>
             <div className="flex items-center gap-1 text-muted-foreground text-sm mt-1">
               <MapPin className="w-3 h-3" />
               <span>{profile.city || "Nigeria"}</span>
