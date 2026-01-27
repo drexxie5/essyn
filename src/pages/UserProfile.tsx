@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, MessageCircle, MapPin, Calendar, Crown, Flag, Lock, Sparkles, User, Target } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, MapPin, Calendar, Crown, Flag, Lock, Sparkles, User, Target, BadgeCheck } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -330,9 +331,12 @@ const UserProfile = () => {
           {/* Profile Info */}
           <div className="space-y-4">
             <div>
+            <div className="flex items-center gap-2">
               <h1 className="text-2xl font-display font-bold">
                 {profile.username}, {profile.age}
               </h1>
+              {profile.is_verified && <VerifiedBadge size="lg" />}
+            </div>
               <div className="flex items-center gap-4 text-muted-foreground mt-1">
                 <span className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
