@@ -23,6 +23,10 @@ export const AppLayout = ({
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
+  // Pages that don't require auth
+  const publicPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/guidelines'];
+  const isPublicPath = publicPaths.includes(location.pathname);
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -47,6 +51,13 @@ export const AppLayout = ({
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Redirect to login if not authenticated and not on public path
+  useEffect(() => {
+    if (!loading && !user && !isPublicPath) {
+      navigate('/login');
+    }
+  }, [loading, user, isPublicPath, navigate]);
 
   const ensurePremiumNotExpired = async (userId: string) => {
     const { data: profile, error } = await supabase
@@ -73,10 +84,6 @@ export const AppLayout = ({
     }
   };
 
-  // Pages that don't require auth
-  const publicPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/guidelines'];
-  const isPublicPath = publicPaths.includes(location.pathname);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -87,9 +94,7 @@ export const AppLayout = ({
     );
   }
 
-  // Redirect to login if not authenticated and not on public path
   if (!user && !isPublicPath) {
-    navigate('/login');
     return null;
   }
 

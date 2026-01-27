@@ -1,19 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Image as ImageIcon, X, Loader2, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { EmojiPicker } from "@/components/chat/EmojiPicker";
+import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
+import { VoiceMessage } from "@/components/chat/VoiceMessage";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import type { Database } from "@/integrations/supabase/types";
 
-type Message = Database['public']['Tables']['messages']['Row'];
+type Message = Database['public']['Tables']['messages']['Row'] & { is_read?: boolean };
 
 interface OtherUser {
   id: string;
   username: string;
   profile_image_url: string | null;
+  is_verified?: boolean;
 }
 
 const CLOUDINARY_CLOUD_NAME = "duyvf9jwl";
@@ -37,16 +42,44 @@ const Chat = () => {
   useEffect(() => {
     if (chatId) {
       initializeChat();
-      subscribeToMessages();
+      const cleanup = subscribeToMessages();
+      return cleanup;
     }
   }, [chatId]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+    // Mark messages as read when viewing
+    if (currentUserId && messages.length > 0) {
+      markMessagesAsRead();
+    }
+  }, [messages, currentUserId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const markMessagesAsRead = async () => {
+    const unreadMessages = messages.filter(
+      (m) => m.sender_id !== currentUserId && !m.is_read
+    );
+    
+    if (unreadMessages.length === 0) return;
+
+    const { error } = await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("chat_id", chatId!)
+      .neq("sender_id", currentUserId!)
+      .eq("is_read", false);
+
+    if (!error) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.sender_id !== currentUserId ? { ...m, is_read: true } : m
+        )
+      );
+    }
   };
 
   const initializeChat = async () => {
@@ -78,7 +111,7 @@ const Chat = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, username, profile_image_url")
+        .select("id, username, profile_image_url, is_verified")
         .eq("id", otherUserId)
         .maybeSingle();
 
@@ -109,13 +142,19 @@ const Chat = () => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `chat_id=eq.${chatId}`,
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          if (payload.eventType === 'INSERT') {
+            setMessages(prev => [...prev, payload.new as Message]);
+          } else if (payload.eventType === 'UPDATE') {
+            setMessages(prev => 
+              prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m)
+            );
+          }
         }
       )
       .subscribe();
@@ -123,6 +162,45 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji);
+  };
+
+  const handleVoiceRecorded = async (audioUrl: string) => {
+    if (!currentUserId) return;
+
+    try {
+      const { error } = await supabase
+        .from("messages")
+        .insert({
+          chat_id: chatId!,
+          sender_id: currentUserId,
+          message_text: audioUrl,
+          message_type: "voice",
+        });
+
+      if (error) {
+        if (error.message.includes("row-level security")) {
+          toast.error("Premium subscription required to send messages");
+          navigate("/premium");
+        } else {
+          throw error;
+        }
+      } else if (otherUser) {
+        await supabase.from("notifications").insert({
+          user_id: otherUser.id,
+          type: "message",
+          title: "Voice message!",
+          message: "Someone sent you a voice note 🎤",
+          related_user_id: currentUserId,
+        });
+      }
+    } catch (error: any) {
+      toast.error("Failed to send voice note");
+      console.error(error);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,7 +236,6 @@ const Chat = () => {
       const data = await response.json();
 
       if (data.secure_url) {
-        // Send image message
         await sendImageMessage(data.secure_url);
       } else {
         throw new Error("Upload failed");
@@ -194,17 +271,14 @@ const Chat = () => {
         } else {
           throw error;
         }
-      } else {
-        // Create notification for the other user
-        if (otherUser) {
-          await supabase.from("notifications").insert({
-            user_id: otherUser.id,
-            type: "message",
-            title: "New photo!",
-            message: "Someone sent you a photo 📷",
-            related_user_id: currentUserId,
-          });
-        }
+      } else if (otherUser) {
+        await supabase.from("notifications").insert({
+          user_id: otherUser.id,
+          type: "message",
+          title: "New photo!",
+          message: "Someone sent you a photo 📷",
+          related_user_id: currentUserId,
+        });
       }
     } catch (error: any) {
       toast.error("Failed to send image");
@@ -236,7 +310,6 @@ const Chat = () => {
       } else {
         setNewMessage("");
         
-        // Create notification for the other user
         if (otherUser) {
           await supabase.from("notifications").insert({
             user_id: otherUser.id,
@@ -253,6 +326,24 @@ const Chat = () => {
     } finally {
       setSending(false);
     }
+  };
+
+  const formatTime = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const ReadReceipt = ({ isRead, isSender }: { isRead: boolean; isSender: boolean }) => {
+    if (!isSender) return null;
+    
+    return isRead ? (
+      <CheckCheck className="w-3.5 h-3.5 text-blue-400" />
+    ) : (
+      <Check className="w-3.5 h-3.5 text-primary-foreground/50" />
+    );
   };
 
   if (loading) {
@@ -282,8 +373,11 @@ const Chat = () => {
               </AvatarFallback>
             </Avatar>
             <div className="text-left">
-              <span className="font-medium block">{otherUser?.username}</span>
-              <span className="text-xs text-green-500">Online</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium">{otherUser?.username}</span>
+                {otherUser?.is_verified && <VerifiedBadge size="sm" />}
+              </div>
+              <span className="text-xs text-emerald-500">Online</span>
             </div>
           </button>
         </div>
@@ -310,7 +404,7 @@ const Chat = () => {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-lg mx-auto w-full">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <p className="text-muted-foreground">
@@ -318,71 +412,93 @@ const Chat = () => {
             </p>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.sender_id === currentUserId ? "justify-end" : "justify-start"
-              }`}
-            >
-              {message.message_type === "image" ? (
-                <button
-                  onClick={() => setPreviewImage(message.message_text)}
-                  className={`max-w-[75%] rounded-2xl overflow-hidden ${
-                    message.sender_id === currentUserId
-                      ? "rounded-br-sm"
-                      : "rounded-bl-sm"
-                  }`}
+          messages.map((message) => {
+            const isSender = message.sender_id === currentUserId;
+            const time = formatTime(message.created_at);
+            
+            if (message.message_type === "voice") {
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isSender ? "justify-end" : "justify-start"}`}
                 >
-                  <img 
-                    src={message.message_text} 
-                    alt="Shared image"
-                    className="w-full max-w-[250px] object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/placeholder.svg";
-                    }}
+                  <VoiceMessage
+                    audioUrl={message.message_text}
+                    isSender={isSender}
+                    timestamp={time}
+                    isRead={message.is_read}
                   />
-                  <p className={`text-[10px] px-2 py-1 ${
-                    message.sender_id === currentUserId 
-                      ? "bg-primary text-primary-foreground/70" 
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {new Date(message.created_at || "").toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </button>
-              ) : (
+                </div>
+              );
+            }
+            
+            if (message.message_type === "image") {
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isSender ? "justify-end" : "justify-start"}`}
+                >
+                  <button
+                    onClick={() => setPreviewImage(message.message_text)}
+                    className={`max-w-[75%] rounded-2xl overflow-hidden ${
+                      isSender ? "rounded-br-sm" : "rounded-bl-sm"
+                    }`}
+                  >
+                    <img 
+                      src={message.message_text} 
+                      alt="Shared image"
+                      className="w-full max-w-[250px] object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.svg";
+                      }}
+                    />
+                    <div className={`flex items-center justify-end gap-1 px-2 py-1 ${
+                      isSender ? "bg-primary" : "bg-muted"
+                    }`}>
+                      <span className={`text-[10px] ${
+                        isSender ? "text-primary-foreground/70" : "text-muted-foreground"
+                      }`}>
+                        {time}
+                      </span>
+                      <ReadReceipt isRead={message.is_read || false} isSender={isSender} />
+                    </div>
+                  </button>
+                </div>
+              );
+            }
+            
+            return (
+              <div
+                key={message.id}
+                className={`flex ${isSender ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className={`max-w-[75%] px-4 py-2 rounded-2xl ${
-                    message.sender_id === currentUserId
+                    isSender
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-muted rounded-bl-sm"
                   }`}
                 >
-                  <p className="text-sm">{message.message_text}</p>
-                  <p className={`text-[10px] mt-1 ${
-                    message.sender_id === currentUserId 
-                      ? "text-primary-foreground/70" 
-                      : "text-muted-foreground"
-                  }`}>
-                    {new Date(message.created_at || "").toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>
+                  <div className="flex items-center justify-end gap-1 mt-1">
+                    <span className={`text-[10px] ${
+                      isSender ? "text-primary-foreground/70" : "text-muted-foreground"
+                    }`}>
+                      {time}
+                    </span>
+                    <ReadReceipt isRead={message.is_read || false} isSender={isSender} />
+                  </div>
                 </div>
-              )}
-            </div>
-          ))
+              </div>
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}
       <div className="sticky bottom-0 bg-background border-t border-border p-4 safe-area-bottom">
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
+        <div className="flex items-center gap-1 max-w-lg mx-auto">
           <input
             ref={fileInputRef}
             type="file"
@@ -402,6 +518,11 @@ const Chat = () => {
               <ImageIcon className="w-5 h-5" />
             )}
           </button>
+          <VoiceRecorder 
+            onVoiceRecorded={handleVoiceRecorded}
+            disabled={uploadingImage}
+          />
+          <EmojiPicker onEmojiSelect={handleEmojiSelect} />
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}

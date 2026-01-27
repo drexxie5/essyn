@@ -39,14 +39,53 @@ serve(async (req) => {
       const { id: transaction_id, tx_ref, amount, meta } = payload.data;
       
       const user_id = meta?.user_id;
-      const plan_type = meta?.plan_type || (amount >= 3000 ? 'monthly' : 'weekly');
+      const plan_type = meta?.plan_type;
+      const payment_type = meta?.payment_type;
       
       if (!user_id) {
         console.error('No user_id in payment metadata');
         return new Response('Missing user_id', { status: 400 });
       }
 
-      const durationDays = plan_type === 'monthly' ? 30 : 7;
+      // Handle verification payments
+      if (payment_type === 'verification') {
+        const isLifetime = plan_type === 'lifetime';
+        const verificationExpires = isLifetime 
+          ? null 
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            is_verified: true,
+            verification_expires: verificationExpires,
+          })
+          .eq('id', user_id);
+
+        if (profileError) {
+          console.error('Verification update error:', profileError);
+          return new Response('Verification update failed', { status: 500 });
+        }
+
+        // Record payment
+        await supabase
+          .from('payments')
+          .insert({
+            user_id,
+            flutterwave_transaction_id: String(transaction_id ?? tx_ref),
+            amount,
+            currency: 'NGN',
+            status: 'successful',
+            plan_type: plan_type === 'lifetime' ? 'monthly' : plan_type, // Store as monthly for DB compatibility
+          });
+
+        console.log(`User ${user_id} verified with ${plan_type} plan`);
+        return new Response('Verification success', { status: 200 });
+      }
+
+      // Handle premium subscription payments
+      const subscriptionPlan = plan_type || (amount >= 3000 ? 'monthly' : 'weekly');
+      const durationDays = subscriptionPlan === 'monthly' ? 30 : 7;
 
       // Extend from existing expiry if still active
       const { data: existingProfile } = await supabase
@@ -69,7 +108,7 @@ serve(async (req) => {
         .from('profiles')
         .update({
           is_premium: true,
-          subscription_plan: plan_type,
+          subscription_plan: subscriptionPlan,
           subscription_start: now.toISOString(),
           subscription_expires: subscription_expires.toISOString(),
         })
@@ -89,14 +128,14 @@ serve(async (req) => {
           amount,
           currency: 'NGN',
           status: 'successful',
-          plan_type,
+          plan_type: subscriptionPlan,
         });
 
       if (paymentError) {
         console.error('Payment record error:', paymentError);
       }
 
-      console.log(`User ${user_id} upgraded to ${plan_type} premium`);
+      console.log(`User ${user_id} upgraded to ${subscriptionPlan} premium`);
       return new Response('Success', { status: 200 });
     }
 

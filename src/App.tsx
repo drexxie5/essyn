@@ -8,6 +8,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Discover from "./pages/Discover";
 import Premium from "./pages/Premium";
+import Verification from "./pages/Verification";
+import Matches from "./pages/Matches";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Chats from "./pages/Chats";
@@ -35,6 +37,8 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/discover" element={<Discover />} />
           <Route path="/premium" element={<Premium />} />
+          <Route path="/verification" element={<Verification />} />
+          <Route path="/matches" element={<Matches />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/chats" element={<Chats />} />
