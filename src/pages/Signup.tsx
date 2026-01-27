@@ -9,12 +9,8 @@ import { Heart, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle, Camera, Loader2 }
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-const nigerianCities = [
-  "Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt", "Benin City", 
-  "Maiduguri", "Zaria", "Aba", "Jos", "Ilorin", "Oyo", "Enugu", 
-  "Abeokuta", "Onitsha", "Warri", "Sokoto", "Calabar", "Uyo", "Kaduna"
-];
+import StateSelector from "@/components/StateSelector";
+import { useGeolocation } from "@/hooks/useGeolocation";
 
 const CLOUDINARY_CLOUD_NAME = "duyvf9jwl";
 const CLOUDINARY_UPLOAD_PRESET = "naughtyhooks_unsigned";
@@ -43,46 +39,39 @@ const Signup = () => {
     confirmAge: false,
   });
 
+  const { 
+    latitude: geoLat, 
+    longitude: geoLng, 
+    state: geoState, 
+    loading: geoLoading,
+    error: geoError,
+    fetchLocation,
+    isNigeria 
+  } = useGeolocation();
+
+  // Auto-fetch location on step 2
   useEffect(() => {
     if (step === 2) {
-      requestLocation();
+      fetchLocation();
     }
-  }, [step]);
+  }, [step, fetchLocation]);
 
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported");
-      return;
+  // Update form data when geolocation is available
+  useEffect(() => {
+    if (geoLat && geoLng) {
+      setFormData(prev => ({ ...prev, latitude: geoLat, longitude: geoLng }));
     }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setFormData(prev => ({ ...prev, latitude, longitude }));
-        
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-          );
-          const data = await response.json();
-          
-          if (data.address?.country_code !== "ng") {
-            setLocationError("NaughtyHooks is only available in Nigeria.");
-            return;
-          }
-          
-          const city = data.address?.city || data.address?.town || data.address?.state || "Unknown";
-          setFormData(prev => ({ ...prev, city }));
-          setLocationError(null);
-        } catch (error) {
-          console.error("Geocoding error:", error);
-        }
-      },
-      () => {
-        setLocationError("Please enable location access.");
-      }
-    );
-  };
+    if (geoState) {
+      setFormData(prev => ({ ...prev, city: geoState }));
+    }
+    if (geoError) {
+      setLocationError(geoError);
+    } else if (geoLat && !isNigeria) {
+      setLocationError("SinglezConnect is only available in Nigeria.");
+    } else {
+      setLocationError(null);
+    }
+  }, [geoLat, geoLng, geoState, geoError, isNigeria]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -283,19 +272,26 @@ const Signup = () => {
               <h1 className="text-xl font-display font-bold text-center">Your Profile</h1>
               <p className="text-muted-foreground text-center text-sm mb-4">Tell us about yourself</p>
 
-              {locationError && (
+              {geoLoading && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30">
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                  <p className="text-xs">Detecting your location...</p>
+                </div>
+              )}
+
+              {locationError && !geoLoading && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
                   <AlertTriangle className="w-4 h-4 text-destructive mt-0.5" />
                   <div>
                     <p className="text-xs text-destructive">{locationError}</p>
-                    <button type="button" onClick={requestLocation} className="text-xs text-primary">
+                    <button type="button" onClick={fetchLocation} className="text-xs text-primary">
                       Try again
                     </button>
                   </div>
                 </div>
               )}
 
-              {formData.city && (
+              {formData.city && !geoLoading && (
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/30">
                   <MapPin className="w-3 h-3 text-primary" />
                   <span className="text-xs">Location: <strong>{formData.city}, Nigeria</strong></span>
@@ -356,24 +352,19 @@ const Signup = () => {
                   </Select>
                 </div>
 
-                {!formData.city && (
-                  <div className="space-y-1">
-                    <Label>City</Label>
-                    <Select
-                      value={formData.city}
-                      onValueChange={(value) => setFormData({ ...formData, city: value })}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select your city" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {nigerianCities.map((city) => (
-                          <SelectItem key={city} value={city}>{city}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                <div className="space-y-1">
+                  <Label>State</Label>
+                  <StateSelector
+                    value={formData.city}
+                    onChange={(value) => setFormData({ ...formData, city: value })}
+                    placeholder="Search and select your state"
+                  />
+                  {formData.latitude > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Auto-detected from your location
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-3">

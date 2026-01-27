@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
+import StateSelector from "@/components/StateSelector";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { useEffect } from "react";
 
 interface DiscoverFiltersProps {
   ageRange: number[];
@@ -17,6 +19,7 @@ interface DiscoverFiltersProps {
   useDistanceFilter: boolean;
   setUseDistanceFilter: (value: boolean) => void;
   onApply: () => void;
+  onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
 const DiscoverFilters = ({
@@ -31,9 +34,69 @@ const DiscoverFilters = ({
   useDistanceFilter,
   setUseDistanceFilter,
   onApply,
+  onLocationUpdate,
 }: DiscoverFiltersProps) => {
+  const { 
+    latitude, 
+    longitude, 
+    state, 
+    loading: locationLoading, 
+    error: locationError,
+    fetchLocation,
+    hasLocation 
+  } = useGeolocation();
+
+  // Update parent with location when available
+  useEffect(() => {
+    if (latitude && longitude && onLocationUpdate) {
+      onLocationUpdate(latitude, longitude);
+    }
+  }, [latitude, longitude, onLocationUpdate]);
+
+  // Auto-set state filter from live location
+  useEffect(() => {
+    if (state && !cityFilter) {
+      setCityFilter(state);
+    }
+  }, [state, cityFilter, setCityFilter]);
+
+  const handleGetLiveLocation = () => {
+    fetchLocation();
+  };
+
   return (
     <div className="space-y-5 p-4 pb-8">
+      {/* Live Location Button */}
+      <div className="space-y-3">
+        <Button 
+          type="button"
+          variant="outline" 
+          className="w-full h-11 gap-2"
+          onClick={handleGetLiveLocation}
+          disabled={locationLoading}
+        >
+          {locationLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Detecting location...
+            </>
+          ) : (
+            <>
+              <MapPin className="w-4 h-4" />
+              {hasLocation ? "Update Live Location" : "Use Live Location"}
+            </>
+          )}
+        </Button>
+        {locationError && (
+          <p className="text-xs text-destructive text-center">{locationError}</p>
+        )}
+        {hasLocation && state && (
+          <p className="text-xs text-emerald-500 text-center">
+            📍 Location detected: {state}
+          </p>
+        )}
+      </div>
+
       <div className="space-y-3">
         <label className="text-sm font-medium">Age Range: {ageRange[0]} - {ageRange[1]}</label>
         <Slider
@@ -73,12 +136,11 @@ const DiscoverFilters = ({
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium">State / City</label>
-        <Input
-          placeholder="e.g. Lagos, Abuja, Anambra"
+        <label className="text-sm font-medium">State</label>
+        <StateSelector
           value={cityFilter}
-          onChange={(e) => setCityFilter(e.target.value)}
-          className="h-11"
+          onChange={setCityFilter}
+          placeholder="Search and select state"
         />
       </div>
 

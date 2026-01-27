@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Settings, LogOut, MapPin, Calendar, 
   Shield, Crown, Edit2, Check, X, Image as ImageIcon,
-  Heart, Sparkles, Target, User
+  Heart, Sparkles, Target, User, Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import ImageUpload from "@/components/ImageUpload";
 import MultiImageUpload from "@/components/MultiImageUpload";
+import StateSelector from "@/components/StateSelector";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import {
   Select,
   SelectContent,
@@ -44,6 +46,40 @@ const INTEREST_OPTIONS = [
 const LOOKING_FOR_OPTIONS = [
   "Serious Relationship", "Casual Dating", "Friendship", "Marriage", "Not Sure Yet"
 ];
+
+// Component to update location from live geolocation
+const UpdateLocationButton = ({ onLocationUpdate }: { onLocationUpdate: (city: string) => void }) => {
+  const { state, loading, fetchLocation, hasLocation } = useGeolocation();
+  
+  useEffect(() => {
+    if (state) {
+      onLocationUpdate(state);
+    }
+  }, [state, onLocationUpdate]);
+
+  return (
+    <Button 
+      type="button" 
+      variant="outline" 
+      size="sm" 
+      onClick={fetchLocation}
+      disabled={loading}
+      className="w-full"
+    >
+      {loading ? (
+        <>
+          <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+          Detecting...
+        </>
+      ) : (
+        <>
+          <MapPin className="w-3 h-3 mr-2" />
+          {hasLocation ? "Update from Live Location" : "Use Live Location"}
+        </>
+      )}
+    </Button>
+  );
+};
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -334,18 +370,22 @@ const Profile = () => {
               )}
             </div>
 
-            {/* City */}
+            {/* City/State */}
             <div>
               <Label className="text-muted-foreground text-xs flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> City/State
+                <MapPin className="w-3 h-3" /> State
               </Label>
               {editing ? (
-                <Input
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="e.g. Lagos State"
-                  className="mt-1"
-                />
+                <div className="mt-1 space-y-2">
+                  <StateSelector
+                    value={formData.city}
+                    onChange={(value) => setFormData({ ...formData, city: value })}
+                    placeholder="Select your state"
+                  />
+                  <UpdateLocationButton 
+                    onLocationUpdate={(city) => setFormData({ ...formData, city })}
+                  />
+                </div>
               ) : (
                 <p className="text-sm">{profile?.city || "Not set"}</p>
               )}
