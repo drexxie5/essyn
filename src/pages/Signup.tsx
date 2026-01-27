@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Flame, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle, Camera, Loader2 } from "lucide-react";
+import { Heart, Eye, EyeOff, ArrowLeft, MapPin, AlertTriangle, Camera, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -176,7 +176,7 @@ const Signup = () => {
 
       if (profileError) throw profileError;
 
-      toast.success("Welcome to NaughtyHooks!");
+      toast.success("Welcome to SinglezConnect!");
       navigate("/discover");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
@@ -194,8 +194,8 @@ const Signup = () => {
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Flame className="w-6 h-6 text-primary" />
-          <span className="text-xl font-display font-bold text-gradient">NaughtyHooks</span>
+          <Heart className="w-6 h-6 text-primary" fill="currentColor" />
+          <span className="text-xl font-display font-bold">SinglezConnect</span>
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-6">

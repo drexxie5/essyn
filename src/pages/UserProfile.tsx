@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, MessageCircle, MapPin, Calendar, Crown, Flag, Lock } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, MapPin, Calendar, Crown, Flag, Lock, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
@@ -234,7 +233,7 @@ const UserProfile = () => {
                 <DialogHeader>
                   <DialogTitle>Report {profile.username}</DialogTitle>
                   <DialogDescription>
-                    Help us keep NaughtyHooks safe by reporting inappropriate behavior.
+                    Help us keep SinglezConnect safe by reporting inappropriate behavior.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -283,6 +282,12 @@ const UserProfile = () => {
                 (e.target as HTMLImageElement).src = "/placeholder.svg";
               }}
             />
+            <div className="absolute top-4 left-4 flex items-center gap-2">
+              <span className="px-2 py-1 rounded-full bg-green-500/90 text-white text-xs font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                Online
+              </span>
+            </div>
             {profile.is_premium && (
               <div className="absolute top-4 right-4 flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-gold text-secondary-foreground text-sm font-medium">
                 <Crown className="w-4 h-4" />
@@ -323,53 +328,76 @@ const UserProfile = () => {
               <h1 className="text-2xl font-display font-bold">
                 {profile.username}, {profile.age}
               </h1>
-              <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                <MapPin className="w-4 h-4" />
-                <span>{profile.city || "Nigeria"}</span>
+              <div className="flex items-center gap-4 text-muted-foreground mt-1">
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {profile.city || "Nigeria"}
+                </span>
+                <span className="flex items-center gap-1">
+                  <User className="w-4 h-4" />
+                  {profile.gender === "male" ? "Man" : profile.gender === "female" ? "Woman" : profile.gender?.replace("_", " ")}
+                </span>
               </div>
             </div>
 
             {profile.bio && (
               <div className="glass rounded-xl p-4">
-                <h2 className="text-sm font-medium text-muted-foreground mb-2">About</h2>
-                <p className="text-sm">{profile.bio}</p>
+                <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  About Me
+                </h2>
+                <p className="text-sm leading-relaxed">{profile.bio}</p>
               </div>
             )}
 
             <div className="glass rounded-xl p-4">
-              <h2 className="text-sm font-medium text-muted-foreground mb-2">Details</h2>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Gender:</span>{" "}
-                  <span className="capitalize">{profile.gender?.replace("_", " ")}</span>
+              <h2 className="text-sm font-medium text-muted-foreground mb-3">Profile Details</h2>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Age</span>
+                  <p className="font-medium">{profile.age} years</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Looking for:</span>{" "}
-                  <span className="capitalize">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Gender</span>
+                  <p className="font-medium capitalize">{profile.gender?.replace("_", " ")}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Looking for</span>
+                  <p className="font-medium capitalize">
                     {profile.interested_in === "male" ? "Men" : 
                      profile.interested_in === "female" ? "Women" : 
                      profile.interested_in?.replace("_", " ")}
-                  </span>
+                  </p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">Joined:</span>{" "}
-                  <span>
-                    {profile.created_at 
-                      ? new Date(profile.created_at).toLocaleDateString("en-NG", { month: "short", year: "numeric" })
-                      : "Recently"}
-                  </span>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Location</span>
+                  <p className="font-medium">{profile.city || "Nigeria"}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="glass rounded-xl p-4">
+              <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Member Since
+              </h2>
+              <p className="text-sm">
+                {profile.created_at 
+                  ? new Date(profile.created_at).toLocaleDateString("en-NG", { 
+                      month: "long", 
+                      year: "numeric" 
+                    })
+                  : "Recently joined"}
+              </p>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 pb-6">
             <Button
               size="lg"
               variant={isLiked ? "default" : "outline"}
-              className="flex-1"
+              className="flex-1 h-14"
               onClick={handleLike}
             >
               <Heart className={`w-5 h-5 mr-2 ${isLiked ? "fill-current" : ""}`} />
@@ -377,7 +405,7 @@ const UserProfile = () => {
             </Button>
             <Button
               size="lg"
-              className="flex-1"
+              className="flex-1 h-14"
               onClick={handleMessage}
             >
               {currentUser?.is_premium ? (

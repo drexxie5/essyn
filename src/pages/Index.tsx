@@ -1,245 +1,233 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin, Shield, Flame, MessageCircle, Crown, Sparkles, Users, Star } from "lucide-react";
+import { Heart, MapPin, Shield, MessageCircle, Crown, Sparkles, Users, Star, Check, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    checkAuth();
+    checkAuthAndRedirect();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuthAndRedirect = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    setIsLoggedIn(!!session);
+    if (session) {
+      navigate("/discover");
+    }
   };
 
   const features = [
     {
       icon: MapPin,
-      title: "Location-Based",
-      description: "Find matches near you across Nigeria with precise location filtering",
+      title: "Find Love Nearby",
+      description: "Discover singles in your city. Real people, real connections, right where you are.",
     },
     {
       icon: Shield,
-      title: "Verified & Secure",
-      description: "All users are verified adults. Your privacy is our priority",
+      title: "Safe & Private",
+      description: "Your identity stays protected. Connect confidently with verified adults only.",
     },
     {
       icon: MessageCircle,
-      title: "Real-Time Chat",
-      description: "Connect instantly with premium messaging features",
+      title: "Chat Instantly",
+      description: "No waiting games. Match and start meaningful conversations right away.",
     },
   ];
 
   const testimonials = [
     {
-      name: "Ada O.",
+      name: "Chioma A.",
       location: "Lagos",
-      text: "Finally found someone who gets me! NaughtyHooks made it so easy to connect.",
+      text: "I was tired of empty promises. SinglezConnect brought me someone real. We're planning our future together! 💕",
       rating: 5,
     },
     {
-      name: "Chidi K.",
-      location: "Abuja", 
-      text: "The location feature is amazing. Met my match within a week!",
+      name: "Emeka J.",
+      location: "Abuja",
+      text: "Met my queen here! The location feature is perfect—she was right in my area. Best decision ever.",
       rating: 5,
     },
     {
-      name: "Ngozi M.",
+      name: "Blessing O.",
       location: "Port Harcourt",
-      text: "Best dating app in Nigeria. Real people, real connections.",
+      text: "Finally, a dating app that works! No time wasters, just genuine people looking for real love.",
       rating: 5,
     },
   ];
 
+  const premiumFeatures = [
+    "Unlimited messages to all matches",
+    "See everyone who likes your profile",
+    "Priority visibility in searches",
+    "Advanced location filters",
+  ];
+
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 md:w-96 md:h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" />
-          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 md:w-80 md:h-80 bg-accent/20 rounded-full blur-3xl animate-pulse-slow delay-1000" />
-          <div className="absolute top-1/2 right-1/3 w-32 h-32 bg-secondary/15 rounded-full blur-2xl animate-pulse-slow delay-500" />
+      <section className="relative min-h-[100dvh] flex flex-col">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-dark">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/15 rounded-full blur-[100px]" />
+          <div className="absolute bottom-32 right-10 w-60 h-60 bg-accent/15 rounded-full blur-[100px]" />
         </div>
 
         {/* Navigation */}
-        <nav className="relative z-50 p-4 md:p-6">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <nav className="relative z-50 py-4 px-4">
+          <div className="max-w-lg mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Flame className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-              <span className="text-xl md:text-2xl font-display font-bold text-gradient">NaughtyHooks</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-sensual flex items-center justify-center">
+                <Heart className="w-5 h-5 text-white" fill="white" />
+              </div>
+              <span className="text-xl font-display font-bold">SinglezConnect</span>
             </div>
-            <div className="flex items-center gap-2 md:gap-4">
-              {isLoggedIn ? (
-                <Link to="/discover">
-                  <Button size="sm">
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Discover
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link to="/login">
-                    <Button variant="ghost" size="sm" className="hidden sm:flex">
-                      Sign In
-                    </Button>
-                    <Button variant="ghost" size="icon" className="sm:hidden">
-                      <Heart className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Link to="/signup">
-                    <Button size="sm">
-                      Get Started
-                    </Button>
-                  </Link>
-                </>
-              )}
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/premium">
+                <Button variant="gold" size="sm" className="hidden sm:flex">
+                  <Crown className="w-3.5 h-3.5 mr-1" />
+                  Premium
+                </Button>
+              </Link>
             </div>
           </div>
         </nav>
 
         {/* Hero Content */}
         <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
-          <div className="text-center max-w-2xl mx-auto">
+          <div className="text-center max-w-lg mx-auto">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
-                <Crown className="w-3 h-3 text-secondary" />
-                <span className="text-xs text-muted-foreground">Nigeria's Premier Adult Dating</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 backdrop-blur mb-6">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-xs text-muted-foreground">1,000+ singles online now</span>
               </div>
               
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold mb-4 leading-tight">
-                Where <span className="text-gradient">Desire</span> Meets{" "}
-                <span className="text-gradient-gold">Connection</span>
+              <h1 className="text-4xl sm:text-5xl font-display font-bold mb-4 leading-[1.1]">
+                Stop Searching.{" "}
+                <span className="text-gradient">Start Connecting.</span>
               </h1>
               
-              <p className="text-base md:text-xl text-muted-foreground mb-6 max-w-lg mx-auto leading-relaxed">
-                Your next romantic adventure awaits. Meet real, verified adults who share your passions. 
-                Life's too short for boring connections. 🔥
+              <p className="text-base text-muted-foreground mb-6 leading-relaxed max-w-md mx-auto">
+                Your person is waiting. Join thousands of Nigerians finding love, companionship, and 
+                real connections every day. No games, no fakes—just genuine singles ready to meet you. 💫
               </p>
 
-              <div className="glass rounded-2xl p-4 md:p-6 mb-8 max-w-md mx-auto">
-                <p className="text-sm md:text-base font-medium text-foreground mb-2">
-                  "Stop scrolling through fake profiles. Find someone real tonight."
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  — Join 10,000+ Nigerians finding love & excitement
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link to="/signup" className="w-full sm:w-auto">
-                  <Button size="lg" className="w-full sm:w-auto group">
-                    <Heart className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    Start Your Journey
+              <div className="flex flex-col gap-3">
+                <Link to="/signup" className="w-full">
+                  <Button size="lg" className="w-full h-14 text-base">
+                    <Heart className="w-5 h-5 mr-2" fill="currentColor" />
+                    Find Your Match Now
                   </Button>
                 </Link>
-                <Link to={isLoggedIn ? "/discover" : "/signup"} className="w-full sm:w-auto">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                    <MapPin className="w-4 h-4" />
-                    Explore Nearby
+                <Link to="/signup" className="w-full">
+                  <Button variant="outline" size="lg" className="w-full">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Browse Singles Near Me
                   </Button>
                 </Link>
               </div>
 
-              <p className="text-xs text-muted-foreground mt-4">
-                ✨ Free to join • 🔒 100% Private • 🇳🇬 Nigeria Only • 18+
-              </p>
+              <div className="flex items-center justify-center gap-4 mt-6 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-green-500" />
+                  Free to join
+                </span>
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-green-500" />
+                  18+ only
+                </span>
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-green-500" />
+                  100% private
+                </span>
+              </div>
             </motion.div>
           </div>
         </div>
-
-        {/* Scroll indicator - hidden on mobile */}
-        <div className="hidden md:block absolute bottom-10 left-1/2 -translate-x-1/2">
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2"
-          >
-            <div className="w-1.5 h-2.5 rounded-full bg-primary" />
-          </motion.div>
-        </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-12 px-4 relative glass-gradient">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-3 gap-4 md:gap-8 max-w-2xl mx-auto">
+      {/* Social Proof Section */}
+      <section className="py-12 px-4 border-y border-border bg-card/50">
+        <div className="max-w-lg mx-auto">
+          <div className="grid grid-cols-3 gap-4 text-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              className="text-center"
             >
-              <p className="text-3xl md:text-4xl font-display font-bold text-gradient">10K+</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Active Users</p>
+              <p className="text-2xl sm:text-3xl font-display font-bold text-gradient">50K+</p>
+              <p className="text-xs text-muted-foreground mt-1">Active Singles</p>
             </motion.div>
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-center"
             >
-              <p className="text-3xl md:text-4xl font-display font-bold text-gradient-gold">500+</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Matches Daily</p>
+              <p className="text-2xl sm:text-3xl font-display font-bold text-gradient-gold">2K+</p>
+              <p className="text-xs text-muted-foreground mt-1">Matches Daily</p>
             </motion.div>
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="text-center"
             >
-              <p className="text-3xl md:text-4xl font-display font-bold text-gradient">20</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Cities Covered</p>
+              <p className="text-2xl sm:text-3xl font-display font-bold text-gradient">36</p>
+              <p className="text-xs text-muted-foreground mt-1">States Covered</p>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16 md:py-24 px-4 relative">
-        <div className="container mx-auto">
+      <section className="py-16 px-4">
+        <div className="max-w-lg mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="text-center mb-12 md:mb-16"
+            className="text-center mb-10"
           >
-            <h2 className="text-3xl md:text-5xl font-display font-bold mb-4">
-              Why <span className="text-gradient">NaughtyHooks</span>?
+            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-3">
+              Why Singles Choose Us
             </h2>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-              We've built the most secure and exciting platform for adult connections in Nigeria
+            <p className="text-muted-foreground text-sm">
+              Built for Nigerians who are done with the dating games
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+          <div className="space-y-4">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="glass rounded-2xl p-6 md:p-8 group hover:border-primary/50 transition-all duration-300"
+                className="glass rounded-xl p-4 flex items-start gap-4"
               >
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-sensual flex items-center justify-center mb-4 md:mb-6 group-hover:shadow-glow transition-shadow duration-300">
-                  <feature.icon className="w-6 h-6 md:w-7 md:h-7 text-primary-foreground" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-sensual flex-shrink-0 flex items-center justify-center">
+                  <feature.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-lg md:text-xl font-display font-semibold mb-2 md:mb-3">{feature.title}</h3>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{feature.description}</p>
+                <div>
+                  <h3 className="font-display font-semibold mb-1">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -247,117 +235,119 @@ const Index = () => {
       </section>
 
       {/* Flirty Copy Section */}
-      <section className="py-16 md:py-24 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-sensual opacity-5" />
-        <div className="container mx-auto relative z-10">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
-                Tired of <span className="text-gradient">Lonely Nights</span>?
-              </h2>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                We get it. Dating in Nigeria can be... complicated. Between fake profiles, 
-                time-wasters, and people who ghost after one message, finding genuine 
-                connections feels impossible.
-              </p>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                NaughtyHooks changes everything. Every user is verified. Every profile is real. 
-                And our smart matching ensures you only see people who are actually looking for 
-                what you want. 💋
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-sensual flex items-center justify-center text-primary-foreground font-bold">A</div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-gold flex items-center justify-center text-secondary-foreground font-bold">C</div>
-                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">N</div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Join 10,000+ verified Nigerians
-                </p>
-              </div>
-            </motion.div>
+      <section className="py-16 px-4 bg-card/50">
+        <div className="max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-8"
+          >
+            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-4">
+              Tired of Being <span className="text-gradient">Single</span>?
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Your DMs are dry. Your ex moved on. Your friends are getting married. 
+              And you're still swiping through fakes and catfish? 😩
+            </p>
+          </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              className="grid grid-cols-2 gap-4"
-            >
-              <div className="glass rounded-2xl p-4 md:p-6">
-                <Sparkles className="w-8 h-8 text-secondary mb-3" />
-                <h3 className="font-display font-semibold mb-2">Smart Matching</h3>
-                <p className="text-sm text-muted-foreground">
-                  Our algorithm learns what you like and finds your perfect match
-                </p>
-              </div>
-              <div className="glass rounded-2xl p-4 md:p-6">
-                <Users className="w-8 h-8 text-primary mb-3" />
-                <h3 className="font-display font-semibold mb-2">Real People</h3>
-                <p className="text-sm text-muted-foreground">
-                  Every profile verified. No bots. No fakes.
-                </p>
-              </div>
-              <div className="glass rounded-2xl p-4 md:p-6">
-                <Shield className="w-8 h-8 text-accent mb-3" />
-                <h3 className="font-display font-semibold mb-2">Your Secret</h3>
-                <p className="text-sm text-muted-foreground">
-                  Discreet browsing. Your privacy protected.
-                </p>
-              </div>
-              <div className="glass rounded-2xl p-4 md:p-6">
-                <Heart className="w-8 h-8 text-primary mb-3" />
-                <h3 className="font-display font-semibold mb-2">Free Likes</h3>
-                <p className="text-sm text-muted-foreground">
-                  See who likes you. Completely free.
-                </p>
-              </div>
-            </motion.div>
+          <div className="glass rounded-2xl p-6 space-y-4">
+            <p className="text-center leading-relaxed">
+              <span className="text-2xl">🔥</span> <strong>Na your time now!</strong>
+            </p>
+            <p className="text-sm text-muted-foreground text-center leading-relaxed">
+              SinglezConnect is different. Every profile is real. Every person is verified. 
+              Our smart matching connects you with singles who are <em>actually ready</em> for 
+              something real—not just another "hey" that goes nowhere.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 pt-2">
+              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Lagos</span>
+              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Abuja</span>
+              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">PH</span>
+              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Ibadan</span>
+              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">Kano</span>
+              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs">+31 more</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 md:py-24 px-4 relative">
-        <div className="container mx-auto">
+      {/* Premium Section */}
+      <section className="py-16 px-4">
+        <div className="max-w-lg mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="glass rounded-2xl p-6 border-secondary/30"
           >
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
-              Real Stories, Real <span className="text-gradient-gold">Connections</span>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-gold flex items-center justify-center">
+                <Crown className="w-6 h-6 text-secondary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg">Go Premium</h3>
+                <p className="text-xs text-muted-foreground">Unlock all features</p>
+              </div>
+            </div>
+
+            <ul className="space-y-3 mb-6">
+              {premiumFeatures.map((feature, i) => (
+                <li key={i} className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center">
+                    <Check className="w-3 h-3 text-secondary" />
+                  </div>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <Link to="/signup">
+              <Button variant="gold" className="w-full">
+                <Zap className="w-4 h-4 mr-2" />
+                Start Free, Upgrade Anytime
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-16 px-4 bg-card/50">
+        <div className="max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-8"
+          >
+            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-2">
+              Real Love Stories 💕
             </h2>
-            <p className="text-muted-foreground">
-              Hear from Nigerians who found love on NaughtyHooks
+            <p className="text-muted-foreground text-sm">
+              From our Nigerian singles community
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="space-y-4">
             {testimonials.map((testimonial, index) => (
               <motion.div
                 key={testimonial.name}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
+                transition={{ delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="glass rounded-2xl p-6"
+                className="glass rounded-xl p-4"
               >
-                <div className="flex items-center gap-1 mb-3">
+                <div className="flex items-center gap-1 mb-2">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-secondary text-secondary" />
+                    <Star key={i} className="w-3.5 h-3.5 fill-secondary text-secondary" />
                   ))}
                 </div>
-                <p className="text-sm mb-4 leading-relaxed">"{testimonial.text}"</p>
+                <p className="text-sm mb-3 leading-relaxed">"{testimonial.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-sensual flex items-center justify-center text-primary-foreground font-bold">
+                  <div className="w-9 h-9 rounded-full bg-gradient-sensual flex items-center justify-center text-sm font-bold text-white">
                     {testimonial.name[0]}
                   </div>
                   <div>
@@ -371,54 +361,54 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 md:py-24 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-sensual opacity-10" />
-        <div className="container mx-auto relative z-10">
+      {/* Final CTA */}
+      <section className="py-16 px-4">
+        <div className="max-w-lg mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="glass rounded-3xl p-8 md:p-16 text-center"
+            className="glass rounded-2xl p-8 text-center"
           >
-            <h2 className="text-3xl md:text-5xl font-display font-bold mb-4 md:mb-6">
-              Ready to <span className="text-gradient">Ignite</span> Your Night?
+            <h2 className="text-2xl sm:text-3xl font-display font-bold mb-4">
+              Your <span className="text-gradient">Person</span> Is Waiting
             </h2>
-            <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto mb-8 md:mb-10">
-              Stop waiting. Start connecting. Your next adventure is just a click away. 
-              Join thousands of verified adults finding real connections across Nigeria.
+            <p className="text-muted-foreground mb-6 leading-relaxed">
+              Don't spend another night scrolling alone. Join SinglezConnect today 
+              and start your love story. It's free to sign up! 🥰
             </p>
             <Link to="/signup">
-              <Button variant="gold" size="xl">
-                <Flame className="w-5 h-5" />
-                Join Now — It's Free
+              <Button size="lg" className="w-full h-14 text-base">
+                <Heart className="w-5 h-5 mr-2" fill="currentColor" />
+                Create Free Account
               </Button>
             </Link>
             <p className="text-xs text-muted-foreground mt-4">
-              No credit card required • Cancel anytime
+              🇳🇬 Nigeria Only • 18+ • No credit card needed
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 md:py-12 px-4 border-t border-border">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
-            <div className="flex items-center gap-2">
-              <Flame className="w-6 h-6 text-primary" />
-              <span className="text-lg font-display font-bold">NaughtyHooks</span>
+      <footer className="py-8 px-4 border-t border-border">
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-gradient-sensual flex items-center justify-center">
+              <Heart className="w-4 h-4 text-white" fill="white" />
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-sm text-muted-foreground">
-              <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
-              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-              <Link to="/guidelines" className="hover:text-foreground transition-colors">Community Guidelines</Link>
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground text-center md:text-right">
-              © 2026 NaughtyHooks. Adults 18+ only. Nigeria only.
-            </p>
+            <span className="font-display font-bold">SinglezConnect</span>
           </div>
+
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground mb-6">
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link to="/guidelines" className="hover:text-foreground transition-colors">Guidelines</Link>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} SinglezConnect. Adults 18+ only.
+          </p>
         </div>
       </footer>
     </div>
