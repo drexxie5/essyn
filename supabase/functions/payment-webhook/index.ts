@@ -36,7 +36,7 @@ serve(async (req) => {
     }
 
     if (payload.event === 'charge.completed' && payload.data.status === 'successful') {
-      const { tx_ref, amount, customer, meta } = payload.data;
+      const { id: transaction_id, tx_ref, amount, meta } = payload.data;
       
       const user_id = meta?.user_id;
       const plan_type = meta?.plan_type || (amount >= 3000 ? 'monthly' : 'weekly');
@@ -47,7 +47,21 @@ serve(async (req) => {
       }
 
       const durationDays = plan_type === 'monthly' ? 30 : 7;
-      const subscription_expires = new Date();
+
+      // Extend from existing expiry if still active
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('subscription_expires')
+        .eq('id', user_id)
+        .maybeSingle();
+
+      const now = new Date();
+      const currentExpiry = existingProfile?.subscription_expires
+        ? new Date(existingProfile.subscription_expires)
+        : null;
+      const base = currentExpiry && currentExpiry > now ? currentExpiry : now;
+
+      const subscription_expires = new Date(base);
       subscription_expires.setDate(subscription_expires.getDate() + durationDays);
 
       // Update user profile to premium
@@ -56,7 +70,7 @@ serve(async (req) => {
         .update({
           is_premium: true,
           subscription_plan: plan_type,
-          subscription_start: new Date().toISOString(),
+          subscription_start: now.toISOString(),
           subscription_expires: subscription_expires.toISOString(),
         })
         .eq('id', user_id);
@@ -71,7 +85,7 @@ serve(async (req) => {
         .from('payments')
         .insert({
           user_id,
-          flutterwave_transaction_id: tx_ref,
+          flutterwave_transaction_id: String(transaction_id ?? tx_ref),
           amount,
           currency: 'NGN',
           status: 'successful',
