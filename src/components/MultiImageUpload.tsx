@@ -92,10 +92,10 @@ const MultiImageUpload = ({ images, maxImages = 3, onUpload }: MultiImageUploadP
         ))}
 
         {images.length < maxImages && (
-          <label className="aspect-square rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+          <label className="aspect-square rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors bg-muted/30">
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               className="hidden"
               onChange={handleUpload}
               disabled={uploading}

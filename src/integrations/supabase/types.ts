@@ -56,6 +56,27 @@ export type Database = {
         }
         Relationships: []
       }
+      matches: {
+        Row: {
+          created_at: string
+          id: string
+          user_one_id: string
+          user_two_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_one_id: string
+          user_two_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_one_id?: string
+          user_two_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           chat_id: string

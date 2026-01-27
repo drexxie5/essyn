@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
-  { icon: Search, label: "Discover", path: "/discover" },
-  { icon: Bell, label: "Alerts", path: "/notifications" },
-  { icon: MessageCircle, label: "Chats", path: "/chats" },
-  { icon: Crown, label: "Premium", path: "/premium" },
-  { icon: User, label: "Profile", path: "/profile" },
+  { icon: Search, label: "Discover", path: "/discover", isPremium: false },
+  { icon: Bell, label: "Alerts", path: "/notifications", isPremium: false },
+  { icon: MessageCircle, label: "Chats", path: "/chats", isPremium: false },
+  { icon: Crown, label: "Premium", path: "/premium", isPremium: true },
+  { icon: User, label: "Profile", path: "/profile", isPremium: false },
 ];
 
 export const BottomNav = () => {
@@ -54,8 +54,8 @@ export const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-area-bottom">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
+      <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const showBadge = item.path === "/notifications" && unreadCount > 0;
@@ -65,21 +65,33 @@ export const BottomNav = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 min-w-[60px]",
+                "relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-4 rounded-lg transition-all",
+                item.isPremium && "relative",
                 isActive
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? item.isPremium 
+                    ? "text-secondary" 
+                    : "text-primary"
+                  : "text-muted-foreground active:text-foreground"
               )}
             >
+              {item.isPremium && (
+                <div className="absolute inset-0 bg-gradient-gold opacity-20 rounded-lg" />
+              )}
               <div className="relative">
-                <item.icon className={cn("w-5 h-5", isActive && "text-primary")} />
+                <item.icon className={cn(
+                  "w-5 h-5",
+                  isActive && (item.isPremium ? "text-secondary" : "text-primary")
+                )} />
                 {showBadge && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-                    {unreadCount > 9 ? "9+" : unreadCount}
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className={cn(
+                "text-[10px] font-medium",
+                item.isPremium && isActive && "text-secondary"
+              )}>{item.label}</span>
             </Link>
           );
         })}
