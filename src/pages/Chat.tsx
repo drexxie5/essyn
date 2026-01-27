@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Image as ImageIcon, X, Loader2, Check, CheckCheck } from "lucide-react";
+import { ArrowLeft, Send, Image as ImageIcon, X, Loader2, Check, CheckCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +10,16 @@ import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { VoiceMessage } from "@/components/chat/VoiceMessage";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type Message = Database['public']['Tables']['messages']['Row'] & { is_read?: boolean };
@@ -38,6 +48,9 @@ const Chat = () => {
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (chatId) {
@@ -154,6 +167,8 @@ const Chat = () => {
             setMessages(prev => 
               prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m)
             );
+          } else if (payload.eventType === 'DELETE') {
+            setMessages(prev => prev.filter(m => m.id !== payload.old.id));
           }
         }
       )
@@ -162,6 +177,44 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("messages")
+        .delete()
+        .eq("id", messageToDelete.id)
+        .eq("sender_id", currentUserId!);
+
+      if (error) throw error;
+      
+      setMessages(prev => prev.filter(m => m.id !== messageToDelete.id));
+      toast.success("Message deleted");
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete message");
+    } finally {
+      setDeleting(false);
+      setMessageToDelete(null);
+    }
+  };
+
+  const handleLongPressStart = (message: Message) => {
+    if (message.sender_id !== currentUserId) return;
+    longPressTimer.current = setTimeout(() => {
+      setMessageToDelete(message);
+    }, 500);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -403,6 +456,29 @@ const Chat = () => {
         </div>
       )}
 
+      {/* Delete Message Dialog */}
+      <AlertDialog open={!!messageToDelete} onOpenChange={() => setMessageToDelete(null)}>
+        <AlertDialogContent className="max-w-xs">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This message will be permanently deleted for everyone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteMessage}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-lg mx-auto w-full">
         {messages.length === 0 ? (
@@ -420,14 +496,29 @@ const Chat = () => {
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isSender ? "justify-end" : "justify-start"}`}
+                  className={`flex ${isSender ? "justify-end" : "justify-start"} group`}
+                  onTouchStart={() => handleLongPressStart(message)}
+                  onTouchEnd={handleLongPressEnd}
+                  onMouseDown={() => handleLongPressStart(message)}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
                 >
-                  <VoiceMessage
-                    audioUrl={message.message_text}
-                    isSender={isSender}
-                    timestamp={time}
-                    isRead={message.is_read}
-                  />
+                  <div className="relative">
+                    <VoiceMessage
+                      audioUrl={message.message_text}
+                      isSender={isSender}
+                      timestamp={time}
+                      isRead={message.is_read}
+                    />
+                    {isSender && (
+                      <button
+                        onClick={() => setMessageToDelete(message)}
+                        className="absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             }
@@ -436,33 +527,48 @@ const Chat = () => {
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isSender ? "justify-end" : "justify-start"}`}
+                  className={`flex ${isSender ? "justify-end" : "justify-start"} group`}
+                  onTouchStart={() => handleLongPressStart(message)}
+                  onTouchEnd={handleLongPressEnd}
+                  onMouseDown={() => handleLongPressStart(message)}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
                 >
-                  <button
-                    onClick={() => setPreviewImage(message.message_text)}
-                    className={`max-w-[75%] rounded-2xl overflow-hidden ${
-                      isSender ? "rounded-br-sm" : "rounded-bl-sm"
-                    }`}
-                  >
-                    <img 
-                      src={message.message_text} 
-                      alt="Shared image"
-                      className="w-full max-w-[250px] object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.svg";
-                      }}
-                    />
-                    <div className={`flex items-center justify-end gap-1 px-2 py-1 ${
-                      isSender ? "bg-primary" : "bg-muted"
-                    }`}>
-                      <span className={`text-[10px] ${
-                        isSender ? "text-primary-foreground/70" : "text-muted-foreground"
+                  <div className="relative">
+                    <button
+                      onClick={() => setPreviewImage(message.message_text)}
+                      className={`max-w-[75%] rounded-2xl overflow-hidden ${
+                        isSender ? "rounded-br-sm" : "rounded-bl-sm"
+                      }`}
+                    >
+                      <img 
+                        src={message.message_text} 
+                        alt="Shared image"
+                        className="w-full max-w-[250px] object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                        }}
+                      />
+                      <div className={`flex items-center justify-end gap-1 px-2 py-1 ${
+                        isSender ? "bg-primary" : "bg-muted"
                       }`}>
-                        {time}
-                      </span>
-                      <ReadReceipt isRead={message.is_read || false} isSender={isSender} />
-                    </div>
-                  </button>
+                        <span className={`text-[10px] ${
+                          isSender ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}>
+                          {time}
+                        </span>
+                        <ReadReceipt isRead={message.is_read || false} isSender={isSender} />
+                      </div>
+                    </button>
+                    {isSender && (
+                      <button
+                        onClick={() => setMessageToDelete(message)}
+                        className="absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             }
@@ -470,23 +576,38 @@ const Chat = () => {
             return (
               <div
                 key={message.id}
-                className={`flex ${isSender ? "justify-end" : "justify-start"}`}
+                className={`flex ${isSender ? "justify-end" : "justify-start"} group`}
+                onTouchStart={() => handleLongPressStart(message)}
+                onTouchEnd={handleLongPressEnd}
+                onMouseDown={() => handleLongPressStart(message)}
+                onMouseUp={handleLongPressEnd}
+                onMouseLeave={handleLongPressEnd}
               >
-                <div
-                  className={`max-w-[75%] px-4 py-2 rounded-2xl ${
-                    isSender
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-muted rounded-bl-sm"
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>
-                  <div className="flex items-center justify-end gap-1 mt-1">
-                    <span className={`text-[10px] ${
-                      isSender ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}>
-                      {time}
-                    </span>
-                    <ReadReceipt isRead={message.is_read || false} isSender={isSender} />
+                <div className="relative">
+                  {isSender && (
+                    <button
+                      onClick={() => setMessageToDelete(message)}
+                      className="absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div
+                    className={`max-w-[75%] px-4 py-2 rounded-2xl ${
+                      isSender
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-muted rounded-bl-sm"
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>
+                    <div className="flex items-center justify-end gap-1 mt-1">
+                      <span className={`text-[10px] ${
+                        isSender ? "text-primary-foreground/70" : "text-muted-foreground"
+                      }`}>
+                        {time}
+                      </span>
+                      <ReadReceipt isRead={message.is_read || false} isSender={isSender} />
+                    </div>
                   </div>
                 </div>
               </div>
