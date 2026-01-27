@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { Search, MessageCircle, User, Crown, Bell, Heart } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,22 @@ const navItems = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
-export const BottomNav = () => {
+export const BottomNav = memo(() => {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", session.user.id)
+      .eq("is_read", false);
+
+    setUnreadCount(count || 0);
+  }, []);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -38,20 +51,7 @@ export const BottomNav = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  const fetchUnreadCount = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { count } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", session.user.id)
-      .eq("is_read", false);
-
-    setUnreadCount(count || 0);
-  };
+  }, [fetchUnreadCount]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border safe-area-bottom">
@@ -105,6 +105,8 @@ export const BottomNav = () => {
       </div>
     </nav>
   );
-};
+});
+
+BottomNav.displayName = "BottomNav";
 
 export default BottomNav;

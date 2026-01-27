@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Crown, Check, MessageCircle, Heart, Zap, ArrowLeft, BadgeCheck, Shield } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const Premium = () => {
+const Premium = memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedPremiumPlan, setSelectedPremiumPlan] = useState<"weekly" | "monthly">("monthly");
@@ -227,18 +226,14 @@ const Premium = () => {
         </header>
 
         <main className="relative z-10 px-4 pb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-6"
-          >
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-display font-bold mb-2">
               Upgrade Your Experience
             </h1>
             <p className="text-muted-foreground text-sm max-w-xs mx-auto">
               Choose a subscription to unlock exclusive features
             </p>
-          </motion.div>
+          </div>
 
           <Tabs defaultValue="premium" className="max-w-sm mx-auto">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -274,11 +269,10 @@ const Premium = () => {
                   {/* Plan Selection */}
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     {(["weekly", "monthly"] as const).map((plan) => (
-                      <motion.button
+                      <button
                         key={plan}
-                        whileTap={{ scale: 0.98 }}
                         onClick={() => setSelectedPremiumPlan(plan)}
-                        className={`relative p-3 rounded-xl border-2 transition-all ${
+                        className={`relative p-3 rounded-xl border-2 transition-all active:scale-[0.98] ${
                           selectedPremiumPlan === plan
                             ? "border-secondary bg-secondary/10"
                             : "border-border bg-card/50"
@@ -292,18 +286,15 @@ const Premium = () => {
                         <p className="text-[10px] text-muted-foreground capitalize">{plan}</p>
                         <p className="text-xl font-bold">₦{premiumPlans[plan].price.toLocaleString()}</p>
                         <p className="text-[9px] text-muted-foreground">{premiumPlans[plan].pricePerDay}</p>
-                      </motion.button>
+                      </button>
                     ))}
                   </div>
 
                   {/* Features */}
                   <div className="space-y-2 mb-6">
-                    {premiumFeatures.map((feature, index) => (
-                      <motion.div
+                    {premiumFeatures.map((feature) => (
+                      <div
                         key={feature.text}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
                         className="flex items-center gap-3 p-2.5 rounded-lg bg-card/50"
                       >
                         <div className="w-7 h-7 rounded-md bg-gradient-gold flex items-center justify-center">
@@ -311,7 +302,7 @@ const Premium = () => {
                         </div>
                         <span className="text-xs font-medium flex-1">{feature.text}</span>
                         <Check className="w-4 h-4 text-secondary" />
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
 
@@ -332,8 +323,8 @@ const Premium = () => {
             <TabsContent value="verified">
               {isVerified ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-4">
-                    <BadgeCheck className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center mx-auto mb-4">
+                    <BadgeCheck className="w-8 h-8 text-accent-foreground" />
                   </div>
                   <h2 className="text-xl font-display font-bold mb-2">You're Verified!</h2>
                   <p className="text-muted-foreground text-sm">Your trusted badge is visible to all users.</p>
@@ -341,59 +332,55 @@ const Premium = () => {
               ) : (
                 <>
                   <div className="flex items-center justify-center gap-2 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
-                      <BadgeCheck className="w-5 h-5 text-white" />
+                    <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shadow-lg">
+                      <BadgeCheck className="w-5 h-5 text-accent-foreground" />
                     </div>
-                    <span className="text-lg font-display font-bold text-blue-500">Verified Badge</span>
+                    <span className="text-lg font-display font-bold text-accent">Verified Badge</span>
                   </div>
 
                   {/* Plan Selection */}
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     {(["monthly", "lifetime"] as const).map((plan) => (
-                      <motion.button
+                      <button
                         key={plan}
-                        whileTap={{ scale: 0.98 }}
                         onClick={() => setSelectedVerifyPlan(plan)}
-                        className={`relative p-3 rounded-xl border-2 transition-all ${
+                        className={`relative p-3 rounded-xl border-2 transition-all active:scale-[0.98] ${
                           selectedVerifyPlan === plan
-                            ? "border-blue-500 bg-blue-500/10"
+                            ? "border-primary bg-primary/10"
                             : "border-border bg-card/50"
                         }`}
                       >
                         {plan === "lifetime" && verifyPlans[plan].savings && (
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-blue-500 text-[9px] font-bold text-white">
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
                             {verifyPlans[plan].savings}
                           </div>
                         )}
                         <p className="text-[10px] text-muted-foreground capitalize">{plan}</p>
                         <p className="text-xl font-bold">₦{verifyPlans[plan].price.toLocaleString()}</p>
                         <p className="text-[9px] text-muted-foreground">{verifyPlans[plan].pricePerDay}</p>
-                      </motion.button>
+                      </button>
                     ))}
                   </div>
 
                   {/* Features */}
                   <div className="space-y-2 mb-6">
-                    {verifyFeatures.map((feature, index) => (
-                      <motion.div
+                    {verifyFeatures.map((feature) => (
+                      <div
                         key={feature.text}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
                         className="flex items-center gap-3 p-2.5 rounded-lg bg-card/50"
                       >
-                        <div className="w-7 h-7 rounded-md bg-blue-500 flex items-center justify-center">
-                          <feature.icon className="w-3.5 h-3.5 text-white" />
+                        <div className="w-7 h-7 rounded-md bg-accent flex items-center justify-center">
+                          <feature.icon className="w-3.5 h-3.5 text-accent-foreground" />
                         </div>
                         <span className="text-xs font-medium flex-1">{feature.text}</span>
-                        <Check className="w-4 h-4 text-blue-500" />
-                      </motion.div>
+                        <Check className="w-4 h-4 text-accent" />
+                      </div>
                     ))}
                   </div>
 
                   <Button
                     size="lg"
-                    className="w-full bg-blue-500 hover:bg-blue-600"
+                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
                     onClick={handleVerificationSubscribe}
                     disabled={loading}
                   >
@@ -411,6 +398,8 @@ const Premium = () => {
       </div>
     </AppLayout>
   );
-};
+});
+
+Premium.displayName = "Premium";
 
 export default Premium;
