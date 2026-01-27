@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Crown, Check, MessageCircle, Heart, Eye, Zap, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -9,13 +9,22 @@ import AppLayout from "@/components/AppLayout";
 
 const Premium = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedPlan, setSelectedPlan] = useState<"weekly" | "monthly">("monthly");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const verifiedReturnRef = useRef(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    // After auth is known, handle Flutterwave return URL (fallback if webhook doesn't arrive)
+    if (!user || verifiedReturnRef.current) return;
+    void maybeVerifyPaymentReturn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, location.search]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -24,6 +33,61 @@ const Premium = () => {
       return;
     }
     setUser(session.user);
+  };
+
+  const maybeVerifyPaymentReturn = async () => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get("status");
+    const paymentFlag = params.get("payment");
+    const transactionId = params.get("transaction_id");
+    const txRef = params.get("tx_ref");
+
+    // Flutterwave typically redirects with status + transaction_id + tx_ref
+    const looksLikeReturn =
+      status === "successful" ||
+      (paymentFlag === "complete" && (transactionId || txRef));
+
+    if (!looksLikeReturn) return;
+    if (!transactionId) {
+      toast.error("Payment completed but missing transaction id.");
+      return;
+    }
+
+    verifiedReturnRef.current = true;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+        return;
+      }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            transaction_id: transactionId,
+            tx_ref: txRef || undefined,
+          }),
+        }
+      );
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || "Payment verification failed");
+      }
+
+      toast.success("Payment verified — Premium activated!");
+      navigate("/discover", { replace: true });
+    } catch (error: any) {
+      console.error("verify-payment failed:", error);
+      toast.error(error?.message || "Could not verify payment yet. Please try again.");
+    }
   };
 
   const plans = {

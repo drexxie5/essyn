@@ -27,6 +27,12 @@ export const AppLayout = ({
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user || null);
+
+      // Keep premium status accurate: if a subscription is expired, remove premium flags
+      if (session?.user) {
+        await ensurePremiumNotExpired(session.user.id);
+      }
+
       setLoading(false);
     };
 
@@ -41,6 +47,31 @@ export const AppLayout = ({
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const ensurePremiumNotExpired = async (userId: string) => {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("is_premium, subscription_expires")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !profile?.is_premium || !profile.subscription_expires) return;
+
+    const expiresAt = new Date(profile.subscription_expires);
+    if (Number.isNaN(expiresAt.getTime())) return;
+
+    if (expiresAt <= new Date()) {
+      await supabase
+        .from("profiles")
+        .update({
+          is_premium: false,
+          subscription_plan: null,
+          subscription_start: null,
+          subscription_expires: null,
+        })
+        .eq("id", userId);
+    }
+  };
 
   // Pages that don't require auth
   const publicPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/guidelines'];
