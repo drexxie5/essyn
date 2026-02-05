@@ -165,8 +165,8 @@ const RecommendedUsers = ({
         </p>
 
         {loading ? (
-          <div className="grid grid-cols-3 gap-2">
-            {[...Array(9)].map((_, i) => (
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="rounded-xl overflow-hidden">
                 <Skeleton className="aspect-[3/4] w-full" />
               </div>
@@ -183,7 +183,7 @@ const RecommendedUsers = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {profiles.map((profile, index) => (
               <ProfileCard
                 key={profile.id}

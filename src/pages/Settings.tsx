@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Bell, Eye, Shield, Lock, HelpCircle, FileText, LogOut, Loader2 } from "lucide-react";
+import { ArrowLeft, Bell, Eye, Shield, Lock, HelpCircle, FileText, LogOut, Loader2, Moon, Sun, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
+import { useTheme } from "next-themes";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import {
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [showOnline, setShowOnline] = useState(true);
   const [showDistance, setShowDistance] = useState(true);
@@ -78,6 +80,25 @@ const Settings = () => {
         </header>
 
         <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
+          {/* Theme Toggle */}
+          <div className="glass rounded-xl p-4 space-y-4">
+            <h2 className="font-display font-semibold flex items-center gap-2">
+              <Palette className="w-4 h-4 text-primary" />
+              Appearance
+            </h2>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="theme" className="cursor-pointer flex items-center gap-2">
+                {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                Dark Mode
+              </Label>
+              <Switch
+                id="theme"
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+              />
+            </div>
+          </div>
+
           {/* Notifications */}
           <div className="glass rounded-xl p-4 space-y-4">
             <h2 className="font-display font-semibold flex items-center gap-2">
