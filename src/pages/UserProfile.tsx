@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
+import { ShareProfileButton } from "@/components/profile/ShareProfileButton";
 import type { Database } from "@/integrations/supabase/types";
 import {
   Dialog,
@@ -30,6 +31,8 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   hobbies?: string[];
   interests?: string[];
   looking_for?: string;
+  video_status_url?: string | null;
+  video_status_expires_at?: string | null;
 };
 
 const UserProfile = () => {
@@ -229,51 +232,54 @@ const UserProfile = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <span className="font-display font-bold">{profile.username}</span>
-            <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-              <DialogTrigger asChild>
-                <button className="p-2 -mr-2 text-muted-foreground hover:text-destructive">
-                  <Flag className="w-5 h-5" />
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Report {profile.username}</DialogTitle>
-                  <DialogDescription>
-                    Help us keep SinglezConnect safe by reporting inappropriate behavior.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Reason</Label>
-                    <Select value={reportCategory} onValueChange={setReportCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a reason" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fake_profile">Fake Profile</SelectItem>
-                        <SelectItem value="harassment">Harassment</SelectItem>
-                        <SelectItem value="inappropriate_content">Inappropriate Content</SelectItem>
-                        <SelectItem value="spam">Spam</SelectItem>
-                        <SelectItem value="underage">Suspected Underage</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+            <div className="flex items-center gap-1">
+              <ShareProfileButton userId={profile.id} username={profile.username} />
+              <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+                <DialogTrigger asChild>
+                  <button className="p-2 text-muted-foreground hover:text-destructive">
+                    <Flag className="w-5 h-5" />
+                  </button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Report {profile.username}</DialogTitle>
+                    <DialogDescription>
+                      Help us keep SinglezConnect safe by reporting inappropriate behavior.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Reason</Label>
+                      <Select value={reportCategory} onValueChange={setReportCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a reason" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fake_profile">Fake Profile</SelectItem>
+                          <SelectItem value="harassment">Harassment</SelectItem>
+                          <SelectItem value="inappropriate_content">Inappropriate Content</SelectItem>
+                          <SelectItem value="spam">Spam</SelectItem>
+                          <SelectItem value="underage">Suspected Underage</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Details</Label>
+                      <Textarea
+                        placeholder="Tell us more about what happened..."
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <Button onClick={handleReport} className="w-full">
+                      Submit Report
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Details</Label>
-                    <Textarea
-                      placeholder="Tell us more about what happened..."
-                      value={reportReason}
-                      onChange={(e) => setReportReason(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                  <Button onClick={handleReport} className="w-full">
-                    Submit Report
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </header>
 

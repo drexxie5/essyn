@@ -13,3 +13,12 @@ verify_jwt = false
 
 [functions.create-verification-payment]
 verify_jwt = false
+
+[functions.create-boost-payment]
+verify_jwt = false
+
+[functions.admin-broadcast]
+verify_jwt = false
+
+[functions.notify-new-user]
+verify_jwt = false

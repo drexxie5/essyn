@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_broadcasts: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          message: string
+          title: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          message: string
+          title: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      boost_payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          expires_at: string
+          flutterwave_transaction_id: string
+          id: string
+          plan_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          expires_at: string
+          flutterwave_transaction_id: string
+          id?: string
+          plan_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          expires_at?: string
+          flutterwave_transaction_id?: string
+          id?: string
+          plan_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chats: {
         Row: {
           created_at: string | null
@@ -32,6 +110,30 @@ export type Database = {
           id?: string
           user_one_id?: string
           user_two_id?: string
+        }
+        Relationships: []
+      }
+      daily_message_counts: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          message_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          message_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          message_count?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -185,6 +287,7 @@ export type Database = {
         Row: {
           age: number
           bio: string | null
+          boost_expires_at: string | null
           city: string | null
           country: string | null
           created_at: string | null
@@ -210,10 +313,13 @@ export type Database = {
           subscription_start: string | null
           username: string
           verification_expires: string | null
+          video_status_expires_at: string | null
+          video_status_url: string | null
         }
         Insert: {
           age: number
           bio?: string | null
+          boost_expires_at?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -239,10 +345,13 @@ export type Database = {
           subscription_start?: string | null
           username: string
           verification_expires?: string | null
+          video_status_expires_at?: string | null
+          video_status_url?: string | null
         }
         Update: {
           age?: number
           bio?: string | null
+          boost_expires_at?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -268,6 +377,8 @@ export type Database = {
           subscription_start?: string | null
           username?: string
           verification_expires?: string | null
+          video_status_expires_at?: string | null
+          video_status_url?: string | null
         }
         Relationships: []
       }
@@ -322,6 +433,7 @@ export type Database = {
     }
     Functions: {
       delete_expired_messages: { Args: never; Returns: undefined }
+      delete_expired_notifications: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -329,6 +441,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reset_daily_message_counts: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
