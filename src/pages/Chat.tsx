@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Image as ImageIcon, X, Loader2, Check, CheckCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Image as ImageIcon, X, Loader2, Check, CheckCheck, Trash2, MoreVertical, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +10,12 @@ import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { VoiceMessage } from "@/components/chat/VoiceMessage";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { CallUI } from "@/components/chat/CallUI";
+import { ChatLimitDialog } from "@/components/chat/ChatLimitDialog";
+import { BlockUserDialog } from "@/components/chat/BlockUserDialog";
+import { OfflineNotice } from "@/components/chat/OfflineNotice";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import { useChatLimit } from "@/hooks/useChatLimit";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +26,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Database } from "@/integrations/supabase/types";
 
 type Message = Database['public']['Tables']['messages']['Row'] & { is_read?: boolean };
@@ -29,6 +41,7 @@ interface OtherUser {
   username: string;
   profile_image_url: string | null;
   is_verified?: boolean;
+  is_online?: boolean;
 }
 
 const CLOUDINARY_CLOUD_NAME = "duyvf9jwl";
@@ -44,13 +57,44 @@ const Chat = () => {
   const [newMessage, setNewMessage] = useState("");
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ is_premium: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Chat limit hook
+  const {
+    remainingMessages,
+    showLimitDialog,
+    setShowLimitDialog,
+    incrementMessageCount,
+    canSendMessage,
+  } = useChatLimit({
+    userId: currentUserId || "",
+    isPremium: currentUserProfile?.is_premium || false,
+  });
+
+  // WebRTC hook
+  const {
+    callState,
+    localVideoRef,
+    remoteVideoRef,
+    startCall,
+    answerCall,
+    rejectCall,
+    endCall,
+    toggleAudio,
+    toggleVideo,
+  } = useWebRTC({
+    chatId: chatId || "",
+    currentUserId: currentUserId || "",
+    otherUserId: otherUser?.id || "",
+  });
 
   useEffect(() => {
     if (chatId) {
@@ -62,7 +106,6 @@ const Chat = () => {
 
   useEffect(() => {
     scrollToBottom();
-    // Mark messages as read when viewing
     if (currentUserId && messages.length > 0) {
       markMessagesAsRead();
     }
@@ -104,6 +147,15 @@ const Chat = () => {
       }
       setCurrentUserId(session.user.id);
 
+      // Get current user profile for premium status
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      
+      setCurrentUserProfile(myProfile);
+
       // Get chat info
       const { data: chat, error: chatError } = await supabase
         .from("chats")
@@ -129,7 +181,7 @@ const Chat = () => {
         .maybeSingle();
 
       if (profile) {
-        setOtherUser(profile);
+        setOtherUser({ ...profile, is_online: false });
       }
 
       // Get messages
@@ -224,7 +276,13 @@ const Chat = () => {
   const handleVoiceRecorded = async (audioUrl: string) => {
     if (!currentUserId) return;
 
+    // Check chat limit for free users
+    if (!canSendMessage()) return;
+
     try {
+      const canSend = await incrementMessageCount();
+      if (!canSend) return;
+
       const { error } = await supabase
         .from("messages")
         .insert({
@@ -270,6 +328,9 @@ const Chat = () => {
       return;
     }
 
+    // Check chat limit for free users
+    if (!canSendMessage()) return;
+
     setUploadingImage(true);
 
     try {
@@ -308,6 +369,9 @@ const Chat = () => {
     if (!currentUserId) return;
 
     try {
+      const canSend = await incrementMessageCount();
+      if (!canSend) return;
+
       const { error } = await supabase
         .from("messages")
         .insert({
@@ -342,8 +406,17 @@ const Chat = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentUserId || sending) return;
 
+    // Check chat limit for free users
+    if (!canSendMessage()) return;
+
     setSending(true);
     try {
+      const canSend = await incrementMessageCount();
+      if (!canSend) {
+        setSending(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("messages")
         .insert({
@@ -399,6 +472,11 @@ const Chat = () => {
     );
   };
 
+  const handleBlocked = () => {
+    toast.success("User blocked. Redirecting...");
+    navigate("/chats");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -433,8 +511,59 @@ const Chat = () => {
               <span className="text-xs text-emerald-500">Online</span>
             </div>
           </button>
+          
+          {/* Call buttons */}
+          <CallUI
+            otherUser={otherUser}
+            callState={callState}
+            localVideoRef={localVideoRef}
+            remoteVideoRef={remoteVideoRef}
+            onStartVoiceCall={() => startCall("voice")}
+            onStartVideoCall={() => startCall("video")}
+            onAnswerCall={answerCall}
+            onRejectCall={rejectCall}
+            onEndCall={endCall}
+            onToggleAudio={toggleAudio}
+            onToggleVideo={toggleVideo}
+          />
+
+          {/* More options menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-full hover:bg-muted">
+                <MoreVertical className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card border-border">
+              <DropdownMenuItem 
+                onClick={() => setShowBlockDialog(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Ban className="w-4 h-4 mr-2" />
+                Block User
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
+
+      {/* Chat Limit Dialog */}
+      <ChatLimitDialog
+        open={showLimitDialog}
+        onOpenChange={setShowLimitDialog}
+        remainingMessages={remainingMessages}
+      />
+
+      {/* Block User Dialog */}
+      {otherUser && (
+        <BlockUserDialog
+          open={showBlockDialog}
+          onOpenChange={setShowBlockDialog}
+          userId={otherUser.id}
+          username={otherUser.username}
+          onBlocked={handleBlocked}
+        />
+      )}
 
       {/* Image Preview Modal */}
       {previewImage && (
@@ -478,6 +607,23 @@ const Chat = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Offline Notice */}
+      {otherUser && !otherUser.is_online && (
+        <OfflineNotice username={otherUser.username} />
+      )}
+
+      {/* Free user message limit indicator */}
+      {!currentUserProfile?.is_premium && (
+        <div className="px-4 py-2 bg-muted/50 border-b border-border">
+          <p className="text-xs text-center text-muted-foreground">
+            {remainingMessages > 0 
+              ? `${remainingMessages} free messages remaining today`
+              : "Daily limit reached. Upgrade to Premium for unlimited messaging!"
+            }
+          </p>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-lg mx-auto w-full">
