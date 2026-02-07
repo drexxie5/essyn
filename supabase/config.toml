@@ -22,3 +22,6 @@ verify_jwt = false
 
 [functions.notify-new-user]
 verify_jwt = false
+
+[functions.cleanup-expired-data]
+verify_jwt = false
