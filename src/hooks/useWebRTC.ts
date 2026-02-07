@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface UseWebRTCOptions {
   chatId: string;
@@ -44,6 +45,8 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+  const pendingCallTypeRef = useRef<"voice" | "video" | null>(null);
 
   // Create ringtone audio
   useEffect(() => {
@@ -53,19 +56,19 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
     };
   }, []);
 
-  const playRingtone = () => {
+  const playRingtone = useCallback(() => {
     if (ringtoneRef.current) {
       ringtoneRef.current.loop = true;
       ringtoneRef.current.play().catch(() => {});
     }
-  };
+  }, []);
 
-  const stopRingtone = () => {
+  const stopRingtone = useCallback(() => {
     if (ringtoneRef.current) {
       ringtoneRef.current.pause();
       ringtoneRef.current.currentTime = 0;
     }
-  };
+  }, []);
 
   const cleanup = useCallback(() => {
     stopRingtone();
@@ -84,6 +87,9 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+
+    pendingOfferRef.current = null;
+    pendingCallTypeRef.current = null;
     
     setCallState({
       isInCall: false,
@@ -96,67 +102,9 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
     });
     
     onCallEnded?.();
-  }, [onCallEnded]);
+  }, [onCallEnded, stopRingtone]);
 
-  const setupSignaling = useCallback(() => {
-    const channel = supabase.channel(`call-${chatId}`, {
-      config: { broadcast: { self: false } },
-    });
-
-    channel.on("broadcast", { event: "call-signal" }, async ({ payload }) => {
-      if (payload.from === currentUserId) return;
-
-      switch (payload.type) {
-        case "offer":
-          setCallState(prev => ({
-            ...prev,
-            isRinging: true,
-            callType: payload.callType,
-            caller: "other",
-          }));
-          playRingtone();
-          
-          // Store the offer for when user answers
-          sessionStorage.setItem("pendingOffer", JSON.stringify(payload.offer));
-          sessionStorage.setItem("pendingCallType", payload.callType);
-          break;
-
-        case "answer":
-          if (peerConnection.current) {
-            await peerConnection.current.setRemoteDescription(
-              new RTCSessionDescription(payload.answer)
-            );
-            setCallState(prev => ({
-              ...prev,
-              isConnecting: false,
-              isInCall: true,
-            }));
-          }
-          break;
-
-        case "ice-candidate":
-          if (peerConnection.current && payload.candidate) {
-            await peerConnection.current.addIceCandidate(
-              new RTCIceCandidate(payload.candidate)
-            );
-          }
-          break;
-
-        case "end-call":
-          cleanup();
-          break;
-
-        case "reject-call":
-          cleanup();
-          break;
-      }
-    });
-
-    channel.subscribe();
-    channelRef.current = channel;
-  }, [chatId, currentUserId, cleanup]);
-
-  const sendSignal = useCallback((type: string, data: any) => {
+  const sendSignal = useCallback((type: string, data: Record<string, unknown>) => {
     if (channelRef.current) {
       channelRef.current.send({
         type: "broadcast",
@@ -166,7 +114,7 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
     }
   }, [currentUserId]);
 
-  const createPeerConnection = useCallback(async (callType: "voice" | "video") => {
+  const setupPeerConnection = useCallback((stream: MediaStream) => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     pc.onicecandidate = (event) => {
@@ -188,50 +136,117 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
       }
     };
 
-    // Get local media
-    const constraints = {
-      audio: true,
-      video: callType === "video",
-    };
+    stream.getTracks().forEach(track => {
+      pc.addTrack(track, stream);
+    });
 
+    peerConnection.current = pc;
+    return pc;
+  }, [sendSignal, cleanup]);
+
+  const setupSignaling = useCallback(() => {
+    if (channelRef.current) return;
+
+    const channel = supabase.channel(`call-${chatId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel.on("broadcast", { event: "call-signal" }, async ({ payload }) => {
+      if (payload.from === currentUserId) return;
+
+      switch (payload.type) {
+        case "offer":
+          pendingOfferRef.current = payload.offer;
+          pendingCallTypeRef.current = payload.callType;
+          setCallState(prev => ({
+            ...prev,
+            isRinging: true,
+            callType: payload.callType,
+            caller: "other",
+          }));
+          playRingtone();
+          break;
+
+        case "answer":
+          if (peerConnection.current) {
+            await peerConnection.current.setRemoteDescription(
+              new RTCSessionDescription(payload.answer)
+            );
+            setCallState(prev => ({
+              ...prev,
+              isConnecting: false,
+              isInCall: true,
+            }));
+          }
+          break;
+
+        case "ice-candidate":
+          if (peerConnection.current && payload.candidate) {
+            try {
+              await peerConnection.current.addIceCandidate(
+                new RTCIceCandidate(payload.candidate)
+              );
+            } catch (e) {
+              console.error("Error adding ICE candidate:", e);
+            }
+          }
+          break;
+
+        case "end-call":
+          cleanup();
+          break;
+
+        case "reject-call":
+          toast.info("Call was declined");
+          cleanup();
+          break;
+      }
+    });
+
+    channel.subscribe();
+    channelRef.current = channel;
+  }, [chatId, currentUserId, cleanup, playRingtone]);
+
+  // CRITICAL: getUserMedia must be called directly in the click handler
+  // This function should be called directly from onClick, not through callbacks
+  const startCall = useCallback(async (callType: "voice" | "video") => {
     try {
+      // First, get user media IMMEDIATELY in the gesture handler
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        video: callType === "video" ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user",
+        } : false,
+      };
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStream.current = stream;
       
-      stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
-      });
-
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
 
       setCallState(prev => ({
         ...prev,
-        isVideoEnabled: callType === "video",
-        isAudioEnabled: true,
-      }));
-    } catch (error) {
-      console.error("Failed to get media:", error);
-      throw error;
-    }
-
-    peerConnection.current = pc;
-    return pc;
-  }, [sendSignal, cleanup]);
-
-  const startCall = useCallback(async (callType: "voice" | "video") => {
-    try {
-      setCallState(prev => ({
-        ...prev,
         isConnecting: true,
         callType,
         caller: "self",
+        isVideoEnabled: callType === "video",
+        isAudioEnabled: true,
       }));
 
+      // Setup signaling channel
       setupSignaling();
-      const pc = await createPeerConnection(callType);
+
+      // Create peer connection with the stream
+      const pc = setupPeerConnection(stream);
       
+      // Create and send offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
@@ -245,54 +260,107 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
         message: `Someone is calling you!`,
         related_user_id: currentUserId,
       });
-    } catch (error) {
+
+    } catch (error: unknown) {
       console.error("Failed to start call:", error);
+      const err = error as Error & { name?: string };
+      
+      if (err.name === "NotAllowedError") {
+        toast.error("Camera/microphone access denied. Please allow access in your browser settings.");
+      } else if (err.name === "NotFoundError") {
+        toast.error("No camera or microphone found. Please connect a device.");
+      } else {
+        toast.error("Failed to start call. Please try again.");
+      }
       cleanup();
     }
-  }, [setupSignaling, createPeerConnection, sendSignal, otherUserId, currentUserId, cleanup]);
+  }, [setupSignaling, setupPeerConnection, sendSignal, otherUserId, currentUserId, cleanup]);
 
+  // CRITICAL: getUserMedia must be called directly in the click handler
   const answerCall = useCallback(async () => {
     try {
       stopRingtone();
       
-      const pendingOffer = sessionStorage.getItem("pendingOffer");
-      const callType = sessionStorage.getItem("pendingCallType") as "voice" | "video";
+      const pendingOffer = pendingOfferRef.current;
+      const callType = pendingCallTypeRef.current;
       
-      if (!pendingOffer) return;
+      if (!pendingOffer || !callType) {
+        toast.error("No incoming call to answer");
+        return;
+      }
+
+      // Get media IMMEDIATELY in the gesture handler
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        video: callType === "video" ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user",
+        } : false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStream.current = stream;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
 
       setCallState(prev => ({
         ...prev,
         isRinging: false,
         isConnecting: true,
+        isVideoEnabled: callType === "video",
+        isAudioEnabled: true,
       }));
 
-      const pc = await createPeerConnection(callType);
-      await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(pendingOffer)));
-
+      // Create peer connection
+      const pc = setupPeerConnection(stream);
+      
+      // Set remote description and create answer
+      await pc.setRemoteDescription(new RTCSessionDescription(pendingOffer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
       sendSignal("answer", { answer });
 
-      sessionStorage.removeItem("pendingOffer");
-      sessionStorage.removeItem("pendingCallType");
+      pendingOfferRef.current = null;
+      pendingCallTypeRef.current = null;
 
       setCallState(prev => ({
         ...prev,
         isConnecting: false,
         isInCall: true,
       }));
-    } catch (error) {
+
+    } catch (error: unknown) {
       console.error("Failed to answer call:", error);
+      const err = error as Error & { name?: string };
+      
+      if (err.name === "NotAllowedError") {
+        toast.error("Camera/microphone access denied. Please allow access in your browser settings.");
+      } else {
+        toast.error("Failed to answer call. Please try again.");
+      }
       cleanup();
     }
-  }, [createPeerConnection, sendSignal, cleanup]);
+  }, [setupPeerConnection, sendSignal, cleanup, stopRingtone]);
 
   const rejectCall = useCallback(() => {
     stopRingtone();
     sendSignal("reject-call", {});
-    cleanup();
-  }, [sendSignal, cleanup]);
+    pendingOfferRef.current = null;
+    pendingCallTypeRef.current = null;
+    setCallState(prev => ({
+      ...prev,
+      isRinging: false,
+      callType: null,
+      caller: null,
+    }));
+  }, [sendSignal, stopRingtone]);
 
   const endCall = useCallback(() => {
     sendSignal("end-call", {});
@@ -321,13 +389,16 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
 
   // Setup signaling when component mounts
   useEffect(() => {
-    setupSignaling();
+    if (chatId && currentUserId) {
+      setupSignaling();
+    }
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
-  }, [setupSignaling]);
+  }, [chatId, currentUserId, setupSignaling]);
 
   return {
     callState,
