@@ -13,7 +13,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { CallUI } from "@/components/chat/CallUI";
 import { ChatLimitDialog } from "@/components/chat/ChatLimitDialog";
 import { BlockUserDialog } from "@/components/chat/BlockUserDialog";
-import { OfflineNotice } from "@/components/chat/OfflineNotice";
+
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useChatLimit } from "@/hooks/useChatLimit";
 import {
@@ -607,11 +607,6 @@ const Chat = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Offline Notice */}
-      {otherUser && !otherUser.is_online && (
-        <OfflineNotice username={otherUser.username} />
-      )}
 
       {/* Free user message limit indicator */}
       {!currentUserProfile?.is_premium && (
