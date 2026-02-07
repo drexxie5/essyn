@@ -432,6 +432,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_data: { Args: never; Returns: undefined }
       delete_expired_messages: { Args: never; Returns: undefined }
       delete_expired_notifications: { Args: never; Returns: undefined }
       has_role: {
