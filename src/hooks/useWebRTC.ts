@@ -41,12 +41,30 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const localStream = useRef<MediaStream | null>(null);
   const remoteStream = useRef<MediaStream | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const pendingCallTypeRef = useRef<"voice" | "video" | null>(null);
+  
+  // State to track streams for reactive binding to video elements
+  const [localStreamReady, setLocalStreamReady] = useState<MediaStream | null>(null);
+  const [remoteStreamReady, setRemoteStreamReady] = useState<MediaStream | null>(null);
+  
+  // Effect to bind local stream to video element when both are ready
+  useEffect(() => {
+    if (localVideoRef.current && localStreamReady) {
+      localVideoRef.current.srcObject = localStreamReady;
+    }
+  }, [localStreamReady, callState.isConnecting, callState.isInCall]);
+
+  // Effect to bind remote stream to video element when both are ready
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStreamReady) {
+      remoteVideoRef.current.srcObject = remoteStreamReady;
+    }
+  }, [remoteStreamReady, callState.isInCall]);
 
   // Create ringtone audio
   useEffect(() => {
@@ -91,6 +109,10 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
     pendingOfferRef.current = null;
     pendingCallTypeRef.current = null;
     
+    // Clear stream states
+    setLocalStreamReady(null);
+    setRemoteStreamReady(null);
+    
     setCallState({
       isInCall: false,
       isRinging: false,
@@ -125,9 +147,7 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
 
     pc.ontrack = (event) => {
       remoteStream.current = event.streams[0];
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
+      setRemoteStreamReady(event.streams[0]);
     };
 
     pc.onconnectionstatechange = () => {
@@ -226,10 +246,7 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStream.current = stream;
-      
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
+      setLocalStreamReady(stream);
 
       setCallState(prev => ({
         ...prev,
@@ -304,10 +321,7 @@ export const useWebRTC = ({ chatId, currentUserId, otherUserId, onCallEnded }: U
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStream.current = stream;
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
+      setLocalStreamReady(stream);
 
       setCallState(prev => ({
         ...prev,
